@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+</head>
+<body>
+    <br>
+    <div class="container">
+        <div class="row">
+            <div class="col-8">
+                <h2>Your financial portfolio</h2>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Symbol</th>
+                        <th scope="col">Count</th>
+                        <th scope="col">Bid</th>
+                        <th scope="col">Ask</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <th><a href="#" data-toggle="modal" data-target="#exampleModal2">AAPL</a></th>
+                        <td>100</td>
+                        <td class="table-warning"><b>$121.5</b></td>
+                        <td>$125.5</td>
+                    </tr>
+                    <tr>
+                        <th><a href="#" data-toggle="modal" data-target="#exampleModal2">IBM</a></th>
+                        <td>100</td>
+                        <td>$121.5</td>
+                        <td>$125.5</td>
+                    </tr>
+                    <tr>
+                        <th><a href="#" data-toggle="modal" data-target="#exampleModal2">TSLA</a></th>
+                        <td>100</td>
+                        <td>$121.5</td>
+                        <td>$125.5</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                    Buy/sell stocks
+                </button>
+            </div>
+            <div class="col-4">
+                <h2>Important notifications</h2>
+                <div class="alert alert-warning" role="alert">
+                    Buy 1000 AAPL shares - order sent
+                </div>
+                <div class="alert alert-success" role="alert">
+                    Buy 100 AAPL shares - success
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    Sell 100 AAPL shares - order sent
+                </div>
+                <div class="alert alert-success" role="alert">
+                    Sell 100 AAPL shares - success
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    Sell 1000 AAPL shares - order sent
+                </div>
+                <div class="alert alert-danger" role="alert">
+                    Error - not enough stocks
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    Buy 1000 AAPL shares - order sent
+                </div>
+                <div class="alert alert-success" role="alert">
+                    Buy 100 AAPL shares - success
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    Sell 100 AAPL shares - order sent
+                </div>
+                <div class="alert alert-success" role="alert">
+                    Sell 100 AAPL shares - success
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    Sell 1000 AAPL shares - order sent
+                </div>
+                <div class="alert alert-danger" role="alert">
+                    Error - not enough stocks
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel2" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel2">AAPL</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>BID</th>
+                                <td>$120.5</td>
+                            </tr>
+                            <tr>
+                                <th>ASK</th>
+                                <td class="table-warning"><b>$120.5</b></td>
+                            </tr>
+                            <tr>
+                                <th>LAST trade price</th>
+                                <td>$120.5</td>
+                            </tr>
+                            <tr>
+                                <th>LAST trade amount</th>
+                                <td>1000</td>
+                            </tr>
+                            <tr>
+                                <th>Amount of market</th>
+                                <td>120,000,000</td>
+                            </tr>
+                            <tr>
+                                <th>Volatility</th>
+                                <td>0.58</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Buy/sell stocks</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Symbol">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Quantity">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Buy</button>
+                    <button type="button" class="btn btn-success" data-dismiss="modal">Sell</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+    <script src="js/popper.min.js" crossorigin="anonymous"></script>
+    <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
