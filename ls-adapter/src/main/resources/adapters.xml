@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Do not remove this line. File tag: adapters_conf-APV-20171220. -->
+
+<!-- 
+    This is the configuration file of the WELCOME Adapter Set,
+    pre-deployed into Lightstreamer Server and used by the
+    demos embedded in the Welcome page.
+    Please refer to the generic template for full details and comments:
+    `DOCS-SDKs/sdk_adapter_java_inprocess/doc/adapter_conf_template/adapters.xml`
+-->
+
+<adapters_conf id="WELCOME">
+    <metadata_adapter_initialised_first>Y</metadata_adapter_initialised_first>
+
+    <metadata_provider>
+        <install_dir>metadata</install_dir>
+        <adapter_class>com.lightstreamer.adapters.welcome_metadata.MixedMetadataAdapter</adapter_class>
+
+        <param name="log_config">../adapters_log_conf.xml</param>
+        <param name="log_config_refresh_seconds">10</param>
+
+        <param name="distinct_snapshot_length">30</param>
+        
+        <!-- items supplied by the CHAT Data Adapter -->
+        <param name="item_family_3">chat_room</param>
+        <param name="modes_for_item_family_3">DISTINCT</param>
+
+        <!-- items supplied by the STOCKS Data Adapter -->
+        <param name="item_family_4">item.*</param>
+        <param name="modes_for_item_family_4">MERGE</param>
+        
+        <!-- items supplied by the TELEMETRY Data Adapter -->
+        <param name="item_family_5">L_driver_1</param>
+        <param name="modes_for_item_family_5">DISTINCT</param>
+        <param name="item_family_6">P_driver_1</param>
+        <param name="modes_for_item_family_6">MERGE</param>
+        
+        <!-- items supplied by the ROOMBALL Data Adapter -->
+        <param name="item_family_7">Players_list*</param>
+        <param name="modes_for_item_family_7">COMMAND</param>
+
+        <param name="item_family_8">STOCK.*</param>
+        <param name="modes_for_item_family_8">MERGE</param>
+
+        <!-- size of the room and max number of players in the Room-Ball Demo -->
+        <param name="world_size_x">478</param>
+        <param name="world_size_y">200</param>
+        <param name="max_players">100</param>
+    </metadata_provider>
+
+    <data_provider name="STOCKS">
+        <install_dir>stocklist</install_dir>
+        <adapter_class>stocklist_demo.adapters.StockQuotesDataAdapter</adapter_class>
+    </data_provider>
+
+    <data_provider name="ROOMBALL">
+        <install_dir>roomball</install_dir>
+        <adapter_class>com.lightstreamer.adapters.RoomBall.RoomBallAdapter</adapter_class>
+        <!-- frame rate for physics calculations (expressed as an interval in milliseconds) -->
+        <param name="frameRate">10</param>
+        <!-- number of steps for a single frame -->
+        <param name="stepsPerFrame">4</param>
+    </data_provider>
+    
+    <data_provider name="CHAT">
+        <install_dir>chat</install_dir>
+        <adapter_class>chat_demo.adapters.ChatDataAdapter</adapter_class>
+		<param name="flush_snapshot">false</param>
+		<!-- <param name="flush_snapshot_interval">10000</param> -->
+    </data_provider>
+
+    <data_provider name="TELEMETRY">
+        <install_dir>telemetry</install_dir>
+        <adapter_class>com.lightstreamer.adapters.web_telemetry.DataProviderImpl</adapter_class>
+    </data_provider>
+
+    <data_provider name="STOCK">
+        <install_dir>stock</install_dir>
+        <adapter_class>com.example.StockPriceAdapter</adapter_class>
+    </data_provider>
+</adapters_conf>

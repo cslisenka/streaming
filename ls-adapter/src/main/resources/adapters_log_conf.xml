@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+	<!--
+	Logging configuration file suitable for all demo Adapters.
+	Currently, the demo code is based on log4j, whereas Lightstreamer Server
+	uses logback for its own logging.
+	Hence the two logs cannot be merged, unless some bridge is set up
+	(for instance, using log4j-over-slf4j.jar in place of log4j.jar and removing
+	all "log_config" parameters from the Adapter configuration).
+	-->
+
+	<appender name="LSFile" class="org.apache.log4j.FileAppender">
+		<param name="File" value="adapters.log" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="%d{dd-MMM-yy HH:mm:ss,SSS }|%-5.5p|%-33.33c|%-27.27t|%m%n"/>
+		</layout>
+	</appender>
+
+	<appender name="LSConsole" class="org.apache.log4j.ConsoleAppender">
+		<!-- <param name="Threshold" value="INFO" /> -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="%d{dd.MMM.yy HH:mm:ss,SSS} &lt;%5.5p&gt; %m%n"/>
+		</layout>
+	</appender>
+
+	<!-- logging by the various Adapters of the predeployed demos -->
+	<category name="LS_demos_Logger" class="org.apache.log4j.Logger">
+		<priority value="INFO" />
+		<appender-ref ref="LSConsole" />
+		<appender-ref ref="LSFile" />
+	</category>
+
+	<root>
+	</root>
+</log4j:configuration>
