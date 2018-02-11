@@ -8,7 +8,7 @@
 	<version>0.0.1-SNAPSHOT</version>
     <modules>
         <module>ls-adapter</module>
-		<module>app</module>
+		<!--module>app</module-->
 		<module>backend</module>
 	</modules>
     <packaging>pom</packaging>

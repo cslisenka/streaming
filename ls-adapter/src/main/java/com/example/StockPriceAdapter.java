@@ -1,5 +1,8 @@
 package com.example;
 
+import com.exchange.IPricingClient;
+import com.exchange.IPricingListener;
+import com.exchange.impl.RandomPriceGenerator;
 import com.lightstreamer.interfaces.data.*;
 import org.apache.log4j.Logger;
 
@@ -7,55 +10,40 @@ import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class StockPriceAdapter implements SmartDataProvider {
+public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
 
     private Logger logger;
 
     private ItemEventListener listener;
-    private MarketDataClient client;
-    private Map<String, Object> itemNameToHandle = new ConcurrentHashMap<>();
+
+    private final IPricingClient gen = new RandomPriceGenerator();
+    private final Map<String, Object> items = new ConcurrentHashMap<>();
 
     @Override
     public void init(Map params, File configDir) throws DataProviderException {
         logger = Logger.getLogger("LS_demos_Logger.StockQuotes");
         logger.info("Starting " + this.getClass().getName() + " adapter");
 
-        // TODO init multiple clients and load-balance between them
-        client = new MarketDataClient();
+        gen.setListener(this);
+        gen.start();
 
-        client.setListener((item, data) ->  {
-            logger.info("sending " + item + " " + data);
-            Object itemHandle = itemNameToHandle.get(item);
-            if (itemHandle != null) {
-                listener.smartUpdate(itemHandle, data, false);
-            }
-        });
-    }
-
-    @Override
-    public boolean isSnapshotAvailable(String itemName) throws SubscriptionException {
-        return false;
-    }
-
-    @Override
-    public void setListener(ItemEventListener listener) {
-        this.listener = listener;
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Shutdown adapter");
+            gen.shutdown();
+        }));
     }
 
     @Override
     public void subscribe(String itemName, Object itemHandle, boolean needsIterator)
             throws SubscriptionException, FailureException {
-        itemNameToHandle.put(itemName, itemHandle);
-
         logger.info("subscribing " + itemName);
-
-        client.subscribe(itemName);
+        items.put(itemName, itemHandle);
+        gen.subscribe(itemName);
     }
 
     @Override
     public void subscribe(String itemName, boolean needsIterator)
             throws SubscriptionException, FailureException {
-
         logger.info("subscribing " + itemName + " needsIterator=" + needsIterator);
         // TODO what is this?
     }
@@ -64,7 +52,31 @@ public class StockPriceAdapter implements SmartDataProvider {
     public void unsubscribe(String itemName) throws SubscriptionException,
             FailureException {
         logger.info("unsubscribing " + itemName);
-        itemNameToHandle.remove(itemName);
-        client.unsubscribe(itemName);
+        items.remove(itemName);
+        gen.unsubscribe(itemName);
+    }
+
+    @Override
+    public void onData(String symbol, Map<String, String> data) {
+        logger.info("sending " + symbol + " " + data);
+        Object itemHandle = items.get(symbol);
+        if (itemHandle != null) {
+            listener.smartUpdate(itemHandle, data, false);
+        }
+    }
+
+    @Override
+    public boolean isSnapshotAvailable(String itemName) throws SubscriptionException {
+        logger.info("Checking if snapshot available");
+        return true;
+    }
+
+    @Override
+    public void setListener(ItemEventListener listener) {
+        this.listener = listener;
+    }
+
+    public void setLogger(Logger logger) {
+        this.logger = logger;
     }
 }
