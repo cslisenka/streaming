@@ -15,7 +15,7 @@ public class LightstreamerClientTest {
     private static final Logger log = Logger.getLogger(LightstreamerClient.class);
 
     private static final String[] fields = {
-        "BID", "ASK", "BID_SIZE", "ASK_SIZE", "LAST"
+        "SEQ_NUM", "BID", "ASK", "BID_SIZE", "ASK_SIZE", "LAST"
     };
 
     private LightstreamerClient ls = new LightstreamerClient("http://localhost:8080", "WELCOME");
@@ -59,6 +59,36 @@ public class LightstreamerClientTest {
         ls.unsubscribe(ibm);
 
         Thread.sleep(2_000);
+    }
+
+    @Test
+    public void testMaxBandwidth() throws InterruptedException {
+        ls.connectionOptions.setRequestedMaxBandwidth("1"); // 1 Kbit/s
+        ls.subscribe(aapl);
+
+        Thread.sleep(5_000);
+
+        ls.connectionOptions.setRequestedMaxBandwidth("8"); // 8 Kbits/s = 1 KByte/s
+
+        Thread.sleep(5_000);
+
+        ls.subscribe(ibm);
+
+        Thread.sleep(5_000);
+
+        ls.connectionOptions.setRequestedMaxBandwidth("1"); // 1 Kbit/s
+
+        Thread.sleep(5_000);
+    }
+
+    @Test
+    public void testMaxFrequency() throws InterruptedException {
+        aapl.setRequestedMaxFrequency("1"); // Max 1 update per second
+
+        ls.subscribe(aapl);
+        ls.subscribe(ibm);
+
+        Thread.sleep(10_000);
     }
 
     @After

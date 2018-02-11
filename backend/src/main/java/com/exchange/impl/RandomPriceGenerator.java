@@ -8,16 +8,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class RandomPriceGenerator implements IPricingClient {
 
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private final Map<String, Boolean> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> subscriptions = new ConcurrentHashMap<>();
     private IPricingListener listener;
 
     @Override
     public void subscribe(String symbol) {
-        subscriptions.put(symbol, true);
+        subscriptions.put(symbol, new AtomicLong(0));
     }
 
     @Override
@@ -45,6 +46,7 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("LAST", last + "");
                 data.put("BID_SIZE", Math.abs(r.nextInt()) + "");
                 data.put("ASK_SIZE", Math.abs(r.nextInt()) + "");
+                data.put("SEQ_NUM", subscriptions.get(s).incrementAndGet() + "");
 
                 listener.onData(s, data);
             });
