@@ -3,6 +3,8 @@ package com.exchange.impl;
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,6 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class RandomPriceGenerator implements IPricingClient {
 
+    private NumberFormat formatter = new DecimalFormat("#0.00");
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final Map<String, AtomicLong> subscriptions = new ConcurrentHashMap<>();
     private IPricingListener listener;
@@ -42,11 +45,11 @@ public class RandomPriceGenerator implements IPricingClient {
                 double last = bid + r.nextDouble();
                 double ask = last + r.nextDouble() + 5;
 
-                data.put("BID", bid + "");
-                data.put("ASK", ask + "");
-                data.put("LAST", last + "");
-                data.put("BID_SIZE", Math.abs(r.nextInt()) + "");
-                data.put("ASK_SIZE", Math.abs(r.nextInt()) + "");
+                data.put("BID", formatter.format(bid));
+                data.put("ASK", formatter.format(ask));
+                data.put("LAST", formatter.format(last));
+                data.put("BID_SIZE", Math.abs(r.nextInt(1000)) + "");
+                data.put("ASK_SIZE", Math.abs(r.nextInt(1000)) + "");
                 data.put("SEQ_NUM", subscriptions.get(s).incrementAndGet() + "");
                 data.put("TIMESTAMP", LocalTime.now() + "");
 

@@ -9,10 +9,10 @@
 </head>
 <body>
     <script src="js/lightstreamer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.js"></script>
     <script>
         // http://www.lightstreamer.com/docs/client_javascript_tools/generator.html
         var myClient = new LightstreamerClient("http://localhost:9090", "WELCOME");
-        myClient.connect();
         myClient.addListener({
             onListenStart: function(lsClient) {
                 console.log("ON LISTEN START " + lsClient)
@@ -34,17 +34,42 @@
             }
         });
 
-        console.log(myClient);
+        myClient.connect();
 
-        var aapl = new Subscription("MERGE", "STOCK.AAPL", ["TIMESTAMP", "BID", "ASK", "ASK_SIZE", "BID_SIZE", "SEQ_NUM"]);
-        aapl.setDataAdapter("STOCK");
-        aapl.addListener({
+        let fields = ["TIMESTAMP", "BID", "ASK", "ASK_SIZE", "BID_SIZE", "SEQ_NUM", "LAST"];
+        let listener = {
             onItemUpdate: function (updateInfo) {
-                let updates = '';
-                updateInfo.forEachField(function (fieldName, fieldPos, value) {
-                    updates +=  fieldName + ' = ' + value + '; ';
+                var cells = document.getElementById(updateInfo.getItemName()).cells;
+                updateInfo.forEachChangedField(function(fieldName, fieldPos, value) {
+                    if ('SEQ_NUM' == fieldName) {
+                        cells[1].innerHTML = value;
+                    }
+
+                    if ('BID' == fieldName) {
+                        cells[2].innerHTML = value;
+                    }
+
+                    if ('BID_SIZE' == fieldName) {
+                        cells[3].innerHTML = value;
+                    }
+
+                    if ('ASK' == fieldName) {
+                        cells[4].innerHTML = value;
+                    }
+
+                    if ('ASK_SIZE' == fieldName) {
+                        cells[5].innerHTML = value;
+                    }
+
+                    if ('LAST' == fieldName) {
+                        cells[6].innerHTML = value;
+                        console.log(value);
+                    }
+
+                    if ('TIMESTAMP' == fieldName) {
+                        cells[7].innerHTML = value;
+                    }
                 });
-                console.log(new Date() + ' ' + updates);
             },
             onSubscriptionError: function(code, message) {
                 console.log('Error : ' + code + ' ' + message);
@@ -55,10 +80,30 @@
             onItemLostUpdates: function(itemName, itemPos, lostUpdates){
                 console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
             }
-        });
+        };
+
+        var aapl = new Subscription("MERGE", "STOCK.AAPL", fields);
+        aapl.setDataAdapter("STOCK");
+        aapl.setRequestedMaxFrequency(2);
+        aapl.addListener(listener);
+
+        var ibm = new Subscription("MERGE", "STOCK.IBM", fields);
+        ibm.setDataAdapter("STOCK");
+        ibm.setRequestedMaxFrequency(2);
+        ibm.addListener(listener);
 
         myClient.subscribe(aapl);
+        myClient.subscribe(ibm);
     </script>
+
+    <!--script>
+        var svg = d3.select("svg"),
+            margin = {top: 20, right: 80, bottom: 30, left: 50},
+            width = svg.attr("width") - margin.left - margin.right,
+            height = svg.attr("height") - margin.top - margin.bottom,
+            g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    </script-->
 
     <br>
     <div class="container">
@@ -78,7 +123,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr>
+                    <tr id="STOCK.AAPL">
                         <!--th><a href="#" data-toggle="modal" data-target="#exampleModal2">AAPL</a></th-->
                         <th>AAPL</th>
                         <td>1</td>
@@ -89,7 +134,7 @@
                         <td>$103</td>
                         <td>Feb 18, 2017</td>
                     </tr>
-                    <tr>
+                    <tr id="STOCK.IBM">
                         <!--th><a href="#" data-toggle="modal" data-target="#exampleModal2">AAPL</a></th-->
                         <th>IBM</th>
                         <td>1</td>
@@ -149,6 +194,8 @@
             </div-->
         </div>
     </div>
+
+    <svg width="960" height="500"></svg>
 
     <!-- Modal -->
     <div class="modal fade" id="exampleModal2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel2" aria-hidden="true">
