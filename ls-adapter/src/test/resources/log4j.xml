@@ -8,11 +8,12 @@
 		</layout>
 	</appender>
 
-	<category name="com.example" class="org.apache.log4j.Logger">
+	<category name="com.example" class="org.apache.log4j.Logger" additivity="false">
 		<priority value="INFO" />
 		<appender-ref ref="console" />
 	</category>
 
 	<root>
+        <appender-ref ref="console" />
 	</root>
 </log4j:configuration>

@@ -2,23 +2,30 @@ package com.example;
 
 import com.lightstreamer.client.LightstreamerClient;
 import com.lightstreamer.client.Subscription;
-import com.lightstreamer.client.SubscriptionListener;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalTime;
+import java.util.Calendar;
+import java.util.Date;
+
 @Ignore
 public class LightstreamerClientTest {
+
+//    private static final String LS_HOST = "http://localhost:8080";
+    private static final String LS_HOST = "http://localhost:9090";
 
     private static final Logger log = Logger.getLogger(LightstreamerClient.class);
 
     private static final String[] fields = {
-        "SEQ_NUM", "BID", "ASK", "BID_SIZE", "ASK_SIZE", "LAST"
+        "SEQ_NUM", "TIMESTAMP", "BID", "ASK", "BID_SIZE", "ASK_SIZE", "LAST"
     };
 
-    private LightstreamerClient ls = new LightstreamerClient("http://localhost:8080", "WELCOME");
+    private LightstreamerClient ls = new LightstreamerClient(LS_HOST, "WELCOME");
     private Subscription aapl;
     private Subscription ibm;
 
@@ -89,6 +96,14 @@ public class LightstreamerClientTest {
         ls.subscribe(ibm);
 
         Thread.sleep(10_000);
+    }
+
+    @Test
+    public void testProxy() throws InterruptedException {
+        // Set bandwidth throttling in Charles to 10 kbit/s and see what happens
+        // Lightstreamer starts detecting that we are getting stale data and starts doing dynamic conflation
+        ls.subscribe(aapl);
+        Thread.sleep(1_000_000);
     }
 
     @After

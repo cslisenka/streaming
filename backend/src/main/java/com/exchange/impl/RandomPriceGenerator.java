@@ -3,6 +3,7 @@ package com.exchange.impl;
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,7 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("BID_SIZE", Math.abs(r.nextInt()) + "");
                 data.put("ASK_SIZE", Math.abs(r.nextInt()) + "");
                 data.put("SEQ_NUM", subscriptions.get(s).incrementAndGet() + "");
+                data.put("TIMESTAMP", LocalTime.now() + "");
 
                 listener.onData(s, data);
             });
