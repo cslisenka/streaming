@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/bootstrap-slider.css" crossorigin="anonymous">
 
-    <title>My stocks</title>
+    <title>My stock portfolio</title>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.js"></script>
@@ -19,7 +19,7 @@
     <script src="js/modernizr.js"></script>
 
     <script>
-        var myClient = new LightstreamerClient("http://localhost:9090", "WELCOME");
+        var myClient = new LightstreamerClient("http://localhost:8080", "WELCOME");
         myClient.addListener({
             onListenStart: function(lsClient) {
                 console.log("ON LISTEN START " + lsClient)
@@ -44,7 +44,7 @@
         myClient.connect();
 
         let fields = ["TIMESTAMP", "BID", "ASK", "ASK_SIZE", "BID_SIZE", "SEQ_NUM", "LAST"];
-        let listener = {
+        let tableListener = {
             onItemUpdate: function (updateInfo) {
                 var cells = document.getElementById(updateInfo.getItemName()).cells;
                 updateInfo.forEachChangedField(function(fieldName, fieldPos, value) {
@@ -88,19 +88,37 @@
             }
         };
 
+        let chartListener = {
+            onItemUpdate: function (updateInfo) {
+                console.log('Update ' + updateInfo);
+            },
+            onSubscriptionError: function(code, message) {
+                console.log('Error : ' + code + ' ' + message);
+            },
+            onEndOfSnapshot: function (itemName, itemPos) {
+                console.log('onEndOfSnapshot ' + itemName);
+            },
+            onItemLostUpdates: function(itemName, itemPos, lostUpdates){
+                console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
+            }
+        };
+
         var aapl = new Subscription("MERGE", "STOCK.AAPL", fields);
         aapl.setDataAdapter("STOCK");
-        aapl.addListener(listener);
+        aapl.addListener(tableListener);
+        aapl.addListener(chartListener);
         myClient.subscribe(aapl);
 
         var ibm = new Subscription("MERGE", "STOCK.IBM", fields);
         ibm.setDataAdapter("STOCK");
-        ibm.addListener(listener);
+        ibm.addListener(tableListener);
+        ibm.addListener(chartListener);
         myClient.subscribe(ibm);
 
         var epam = new Subscription("MERGE", "STOCK.EPAM", fields);
         epam.setDataAdapter("STOCK");
-        epam.addListener(listener);
+        epam.addListener(tableListener);
+        epam.addListener(chartListener);
         myClient.subscribe(epam);
     </script>
 
