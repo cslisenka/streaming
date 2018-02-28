@@ -15,14 +15,25 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class RandomPriceGenerator implements IPricingClient {
 
-    private NumberFormat formatter = new DecimalFormat("#0.00");
+    private final NumberFormat formatter = new DecimalFormat("#0.00");
+
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private final Map<String, AtomicLong> subscriptions = new ConcurrentHashMap<>();
+
+    private Map<String, Snapshot> subscriptions = new ConcurrentHashMap<>();
     private IPricingListener listener;
+
+    static class Snapshot {
+        double bid;
+        int bidSize;
+        double ask;
+        int askSize;
+        double last;
+        int seqNum;
+    }
 
     @Override
     public void subscribe(String symbol) {
-        subscriptions.put(symbol, new AtomicLong(0));
+        subscriptions.put(symbol, new Snapshot());
     }
 
     @Override
@@ -37,23 +48,41 @@ public class RandomPriceGenerator implements IPricingClient {
 
     @Override
     public void start() {
+        Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
-            Random r = new Random();
-            subscriptions.keySet().forEach(s -> {
+            subscriptions.forEach((symbol, s) -> {
+                if (s.seqNum == 0) {
+                    // New subscription
+                    double basePrice = r.nextDouble() * 100;
+                    s.bid = basePrice;
+                    s.last = s.bid + r.nextDouble();
+                    s.ask = s.last + r.nextDouble() * 10;
+                    s.bidSize = Math.abs(r.nextInt(1000));
+                    s.askSize = Math.abs(r.nextInt(1000));
+                    s.seqNum = 1;
+                } else {
+                    s.seqNum++;
+                    if (r.nextBoolean()) {
+                        s.bid = s.bid + r.nextDouble();
+                        s.bidSize = s.bidSize + r.nextInt(100);
+                    } else if (r.nextBoolean()) {
+                        s.ask = s.bid + r.nextDouble();
+                        s.askSize = s.askSize + r.nextInt(100);
+                    } else if (r.nextBoolean() && r.nextBoolean() && r.nextBoolean()) {
+                        // Very rare update
+                        s.last = (s.ask + s.bid) / 2 + r.nextDouble();
+                    }
+                }
+
                 Map<String, String> data = new HashMap<>();
-                double bid = r.nextDouble() * 100;
-                double last = bid + r.nextDouble();
-                double ask = last + r.nextDouble() + 5;
-
-                data.put("BID", formatter.format(bid));
-                data.put("ASK", formatter.format(ask));
-                data.put("LAST", formatter.format(last));
-                data.put("BID_SIZE", Math.abs(r.nextInt(1000)) + "");
-                data.put("ASK_SIZE", Math.abs(r.nextInt(1000)) + "");
-                data.put("SEQ_NUM", subscriptions.get(s).incrementAndGet() + "");
+                data.put("BID", formatter.format(s.bid));
+                data.put("ASK", formatter.format(s.ask));
+                data.put("LAST", formatter.format(s.last));
+                data.put("BID_SIZE",  s.bidSize + "");
+                data.put("ASK_SIZE", s.askSize + "");
+                data.put("SEQ_NUM", s.seqNum + "");
                 data.put("TIMESTAMP", LocalTime.now() + "");
-
-                listener.onData(s, data);
+                listener.onData(symbol, data);
             });
         }, 0, 100, TimeUnit.MILLISECONDS);
     }
