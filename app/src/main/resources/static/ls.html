@@ -43,9 +43,10 @@
 
         myClient.connect();
 
-        let fields = ["TIMESTAMP", "BID", "ASK", "ASK_SIZE", "BID_SIZE", "SEQ_NUM", "LAST"];
         let tableListener = {
             onItemUpdate: function (updateInfo) {
+                console.log(updateInfo);
+
                 var cells = document.getElementById(updateInfo.getItemName()).cells;
                 updateInfo.forEachChangedField(function(fieldName, fieldPos, value) {
                     if ('SEQ_NUM' == fieldName) {
@@ -90,7 +91,7 @@
 
         let chartListener = {
             onItemUpdate: function (updateInfo) {
-                console.log('Update ' + updateInfo);
+//                console.log('Update ' + updateInfo);
             },
             onSubscriptionError: function(code, message) {
                 console.log('Error : ' + code + ' ' + message);
@@ -102,24 +103,6 @@
                 console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
             }
         };
-
-        var aapl = new Subscription("MERGE", "STOCK.AAPL", fields);
-        aapl.setDataAdapter("STOCK");
-        aapl.addListener(tableListener);
-        aapl.addListener(chartListener);
-        myClient.subscribe(aapl);
-
-        var ibm = new Subscription("MERGE", "STOCK.IBM", fields);
-        ibm.setDataAdapter("STOCK");
-        ibm.addListener(tableListener);
-        ibm.addListener(chartListener);
-        myClient.subscribe(ibm);
-
-        var epam = new Subscription("MERGE", "STOCK.EPAM", fields);
-        epam.setDataAdapter("STOCK");
-        epam.addListener(tableListener);
-        epam.addListener(chartListener);
-        myClient.subscribe(epam);
     </script>
 
     <!--script>
@@ -151,19 +134,19 @@
                     <thead>
                     <tr>
                         <th scope="col">SYMBOL</th>
-                        <th scope="col">SEQ_NUM</th>
+                        <th scope="col">SEQ NUM</th>
                         <th style="width: 100px" scope="col">BID</th>
                         <th scope="col">BID SIZE</th>
                         <th style="width: 100px" scope="col">ASK</th>
-                        <th scope="col">ASK_SIZE</th>
+                        <th scope="col">ASK SIZE</th>
                         <th style="width: 100px" scope="col">LAST</th>
                         <th scope="col">TIMESTAMP</th>
-                        <th>MAX FREQUENCY</th>
+                        <th style="width: 320px;">MAX FREQUENCY</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr id="STOCK.AAPL">
-                        <th>AAPL <span class="badge badge-danger">+7</span> <!-- TODO add to sequence number as increment count --></th>
+                    <tr id="STOCK_AAPL">
+                        <th>AAPL</th>
                         <td>1</td>
                         <td>$100.1</td>
                         <td>10000</td>
@@ -173,14 +156,19 @@
                         <td>Feb 18, 2017</td>
                         <td>
                             <div class="alert alert-dark" role="alert">
-                                <b><span id="aaplFrequencyValue"></span> updates/s</b><br>
-                                <input id="frAAPL" data-slider-id='frAAPL' type="text"
-                                       data-slider-min="1" data-slider-max="100" data-slider-step="1"
-                                       data-slider-value="2"/>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="slSTOCK_AAPL" style="width: 100px;" data-slider-id='slSTOCK_AAPL' type="text"
+                                               data-slider-min="1" data-slider-max="100" data-slider-step="1"
+                                               data-slider-value="2"/>
+                                    </div>
                             </div>
                         </td>
                     </tr>
-                    <tr id="STOCK.IBM">
+                    <tr id="STOCK_IBM">
                         <th>IBM</th>
                         <td>1</td>
                         <td>$100.1</td>
@@ -191,14 +179,20 @@
                         <td>Feb 18, 2017</td>
                         <td>
                             <div class="alert alert-dark" role="alert">
-                                <b><span id="ibmFrequencyValue"></span> updates/s</b><br>
-                                <input id="frIBM" data-slider-id='frIBM' type="text"
-                                       data-slider-min="1" data-slider-max="100" data-slider-step="1"
-                                       data-slider-value="2"/>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <b><span id="frSTOCK_IBM"></span> updates/s</b>
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="slSTOCK_IBM" style="width: 100px;" data-slider-id='frSTOCK_IBM' type="text"
+                                               data-slider-min="1" data-slider-max="100" data-slider-step="1"
+                                               data-slider-value="2"/>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
-                    <tr id="STOCK.EPAM">
+                    <tr id="STOCK_EPAM">
                         <th>EPAM</th>
                         <td>1</td>
                         <td>$100.1</td>
@@ -209,10 +203,40 @@
                         <td>Feb 18, 2017</td>
                         <td>
                             <div class="alert alert-dark" role="alert">
-                                <b><span id="epamFrequencyValue"></span> updates/s</b><br>
-                                <input id="frEPAM" data-slider-id='frEPAM' type="text"
-                                       data-slider-min="1" data-slider-max="100" data-slider-step="1"
-                                       data-slider-value="2"/>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="slSTOCK_EPAM" style="width: 100px;" data-slider-id='frSTOCK_EPAM' type="text"
+                                               data-slider-min="1" data-slider-max="100" data-slider-step="1"
+                                               data-slider-value="2"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="STOCK_TSLA">
+                        <th>TSLA</th>
+                        <td>1</td>
+                        <td>$100.1</td>
+                        <td>10000</td>
+                        <td class="table-warning">$105.5</td>
+                        <td>12000</td>
+                        <td>$103</td>
+                        <td>Feb 18, 2017</td>
+                        <td>
+                            <div class="alert alert-dark" role="alert">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="slSTOCK_TSLA" style="width: 100px;" data-slider-id='frSTOCK_TSLA' type="text"
+                                               data-slider-min="1" data-slider-max="100" data-slider-step="1"
+                                               data-slider-value="2"/>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -267,7 +291,8 @@
     </div>
 
     <script>
-        var bandwidth = new Slider('#bandwidth', {
+        // Init bandwidth slider
+        new Slider('#bandwidth', {
             tooltip: 'always',
             formatter: function(value) {
                 document.getElementById("bandwidthValue").innerHTML = value;
@@ -277,108 +302,36 @@
                 return value;
             }
         });
-
-        var frAAPL = new Slider("#frAAPL", {
-            tooltip: 'always',
-            formatter: function(value) {
-                document.getElementById("aaplFrequencyValue").innerHTML = value;
-                aapl.setRequestedMaxFrequency(value);
-                return value;
-            }
-        });
-
-        var frIBM = new Slider("#frIBM", {
-            tooltip: 'always',
-            formatter: function(value) {
-                document.getElementById("ibmFrequencyValue").innerHTML = value;
-                ibm.setRequestedMaxFrequency(value);
-                return value;
-            }
-        });
-
-        var frEPAM = new Slider("#frEPAM", {
-            tooltip: 'always',
-            formatter: function(value) {
-                document.getElementById("epamFrequencyValue").innerHTML = value;
-                epam.setRequestedMaxFrequency(value);
-                return value;
-            }
-        });
     </script>
 
-    <!--svg width="960" height="500"></svg-->
+    <script>
+        let fields = ["TIMESTAMP", "BID", "ASK", "ASK_SIZE", "BID_SIZE", "SEQ_NUM", "LAST"];
+        let stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
 
-    <!-- Modal -->
-    <!--div class="modal fade" id="exampleModal2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel2" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel2">AAPL</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <table class="table">
-                        <tbody>
-                            <tr>
-                                <th>BID</th>
-                                <td>$120.5</td>
-                            </tr>
-                            <tr>
-                                <th>ASK</th>
-                                <td class="table-warning"><b>$120.5</b></td>
-                            </tr>
-                            <tr>
-                                <th>LAST trade price</th>
-                                <td>$120.5</td>
-                            </tr>
-                            <tr>
-                                <th>LAST trade amount</th>
-                                <td>1000</td>
-                            </tr>
-                            <tr>
-                                <th>Amount of market</th>
-                                <td>120,000,000</td>
-                            </tr>
-                            <tr>
-                                <th>Volatility</th>
-                                <td>0.58</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div-->
+        // Prepare subscriptions and sliders
+        var subscriptions = stocks.map(function(s) {
+            let sub = new Subscription('MERGE', s, fields);
+            sub.setDataAdapter('STOCK');
+            sub.addListener(tableListener);
+            sub.addListener(chartListener);
 
-    <!-- Modal -->
-    <!--div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Buy/sell stocks</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form>
-                        <div class="form-group">
-                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Symbol">
-                        </div>
-                        <div class="form-group">
-                            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Quantity">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-dismiss="modal">Buy</button>
-                    <button type="button" class="btn btn-success" data-dismiss="modal">Sell</button>
-                </div>
-            </div>
-        </div>
-    </div-->
+            new Slider('#sl' + s, {
+                tooltip: 'always',
+                formatter: function(value) {
+                    document.getElementById('fr' + s).innerHTML = value;
+                    sub.setRequestedMaxFrequency(value);
+                    return value;
+                }
+            });
+
+            return sub;
+        });
+
+        // Subscribe all
+        subscriptions.forEach(function (sub) {
+            myClient.subscribe(sub);
+        })
+    </script>
 
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
