@@ -88,31 +88,7 @@
                 console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
             }
         };
-
-        let chartListener = {
-            onItemUpdate: function (updateInfo) {
-//                console.log('Update ' + updateInfo);
-            },
-            onSubscriptionError: function(code, message) {
-                console.log('Error : ' + code + ' ' + message);
-            },
-            onEndOfSnapshot: function (itemName, itemPos) {
-                console.log('onEndOfSnapshot ' + itemName);
-            },
-            onItemLostUpdates: function(itemName, itemPos, lostUpdates){
-                console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
-            }
-        };
     </script>
-
-    <!--script>
-        var svg = d3.select("svg"),
-            margin = {top: 20, right: 80, bottom: 30, left: 50},
-            width = svg.attr("width") - margin.left - margin.right,
-            height = svg.attr("height") - margin.top - margin.bottom,
-            g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    </script-->
 
     <br>
     <div class="container">
@@ -313,7 +289,6 @@
             let sub = new Subscription('MERGE', s, fields);
             sub.setDataAdapter('STOCK');
             sub.addListener(tableListener);
-            sub.addListener(chartListener);
 
             new Slider('#sl' + s, {
                 tooltip: 'always',
