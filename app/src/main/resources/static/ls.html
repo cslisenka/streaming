@@ -86,10 +86,14 @@
                 if (index > -1) {
                     switch(fieldName){
                         case 'TIMESTAMP':
-                            cells[index + 1].innerHTML = new Date(+value).toLocaleTimeString();
+                            let timestamp = new Date(+value);
+                            let diff = new Date().getTime() - timestamp;
+
+                            cells[index + 1].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
                             break;
                         case 'SEQ_NUM':
-                            cells[index + 1].innerHTML = '' + value + ' - ' + (value - (stockSeqNums[stockName] || 0));
+                            let diff2 = value - (stockSeqNums[stockName] || 0);
+                            cells[index + 1].innerHTML = `${value} <br> (${diff2})`;
                             stockSeqNums[stockName] = value;
                             break;
                         default:
