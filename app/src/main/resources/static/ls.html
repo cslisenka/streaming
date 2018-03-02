@@ -6,7 +6,6 @@
 
     <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/bootstrap-slider.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
 
     <title>My stock portfolio</title>
@@ -47,8 +46,6 @@
 <script src="js/lodash.js"></script>
 <!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
 <script src="js/lightstreamer.js"></script>
-<script src="js/bootstrap-slider.js"></script>
-<script src="js/modernizr.js"></script>
 <script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
 <script src="js/popper.min.js" crossorigin="anonymous"></script>
 <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
@@ -122,11 +119,8 @@
         </div>
         <div class="col-3">
             <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Max bandwidth: <span id="bandwidthValue">500</span> kbit/s</b><br>
-                <input id="bandwidth" type="range"
-                       min="1" max="1000" step="1" value="500"
-                       style="background-color: red;"
-                >
+                <b>Max bandwidth: <span id="bandwidthValue">100</span> kbit/s</b><br>
+                <input id="bandwidth" type="range" min="1" max="200" step="1" value="100">
             </div>
             <span class="badge badge-primary">AAPL</span><br>
             <span class="badge badge-danger">IBM</span><br>
@@ -165,12 +159,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
+                                    <b><span id="frSTOCK_AAPL">1</span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_AAPL" style="width: 100px;" data-slider-id='slSTOCK_AAPL' type="text"
-                                           data-slider-min="0.1" data-slider-max="20" data-slider-step="0.1"
-                                           data-slider-value="0.5"/>
+                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1" value="1">
                                 </div>
                             </div>
                     </td>
@@ -188,12 +180,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_IBM"></span> updates/s</b>
+                                    <b><span id="frSTOCK_IBM">1</span> updates/s</b>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_IBM" style="width: 100px;" data-slider-id='frSTOCK_IBM' type="text"
-                                           data-slider-min="0.1" data-slider-max="20" data-slider-step="0.1"
-                                           data-slider-value="0.5"/>
+                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1" value="1">
                                 </div>
                             </div>
                         </div>
@@ -212,12 +202,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
+                                    <b><span id="frSTOCK_EPAM">1</span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_EPAM" style="width: 100px;" data-slider-id='frSTOCK_EPAM' type="text"
-                                           data-slider-min="0.1" data-slider-max="20" data-slider-step="0.1"
-                                           data-slider-value="0.5"/>
+                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1" value="1">
                                 </div>
                             </div>
                         </div>
@@ -236,12 +224,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
+                                    <b><span id="frSTOCK_TSLA">1</span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_TSLA" style="width: 100px;" data-slider-id='frSTOCK_TSLA' type="text"
-                                           data-slider-min="0.1" data-slider-max="20" data-slider-step="0.1"
-                                           data-slider-value="0.5"/>
+                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1" value="1">
                                 </div>
                             </div>
                         </div>
@@ -298,7 +284,7 @@
 </div>
 
 <script>
-    const limit = 1200,  // points at the chart for a line
+    const limit = 3200,  // points at the chart for a line
         interval = 20 * 1000, //
         now = Date.now(),
         startTime = new Date(now - interval);
@@ -365,7 +351,6 @@
     }
 
     function update(date) {
-
         for (let name in groups) {
             groups[name].path.attr('d', line);
         }
@@ -382,9 +367,8 @@
         paths.transition().ease('ease');
     }
 
-    const throttledUpdate =_.throttle(update, 400);
+    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
 
-    // const updateThrottled = _.throttle(update, duration);
     const d3Listener = {
         onItemUpdate: (updateInfo) => {
             let stockName = updateInfo.getItemName(),
@@ -428,13 +412,13 @@
         sub.setDataAdapter('STOCK');
         sub.addListener(tableListener);
         sub.addListener(d3Listener);
+        sub.setRequestedMaxFrequency(1);
 
-        new Slider('#sl' + s, {
-            tooltip: 'always',
-            formatter: function(value) {
-                document.getElementById('fr' + s).innerHTML = value;
+        $('#sl' + s).change((e) => {
+            let value = +e.target.value;
+            if (value >= 0) {
+                document.getElementById('fr' + s).innerHTML = '' + value;
                 sub.setRequestedMaxFrequency(value);
-                return value;
             }
         });
 
