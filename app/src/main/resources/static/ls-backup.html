@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/bootstrap-slider.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
 
     <title>My stock portfolio</title>
 </head>
@@ -54,7 +53,10 @@
 <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 
 <script>
-    let myClient = new LightstreamerClient("http://localhost:8080", "WELCOME");
+    let myClient = new LightstreamerClient("http://localhost:9090", "WELCOME");
+    myClient.setReverseHeartbeatInterval(1000); // 100 ms
+    myClient.setStalledTimeout(5000);
+    myClient.setSlowingEnabled(true);
 
     myClient.addListener({
         onListenStart: (lsClient) => { console.log(`ON LISTEN START ${lsClient}`); },
@@ -68,36 +70,22 @@
             }
         },
         onListenEnd: (lsClient) => { console.log(`ON LISTEN END ${lsClient}`); },
-        onShareAbort: () => { console.log('Share Abort'); }
+        onShareAbort: () => {console.log('Share Abort');}
     });
 
     myClient.connect();
 
     const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
     const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
-    let stockSeqNums = {};
 
     let tableListener = {
         onItemUpdate: (updateInfo) => {
-            let stockName = updateInfo.getItemName();
-            let cells = document.getElementById(stockName).cells;
-            stockSeqNums[stockName] = stockSeqNums[stockName] || {};
 
+            let cells = document.getElementById(updateInfo.getItemName()).cells;
             updateInfo.forEachChangedField((fieldName, fieldPos, value) => {
                 let index = fields.indexOf(fieldName);
-
                 if (index > -1) {
-                    switch(fieldName){
-                        case 'TIMESTAMP':
-                            cells[index + 1].innerHTML = new Date(+value).toLocaleTimeString();
-                            break;
-                        case 'SEQ_NUM':
-                            cells[index + 1].innerHTML = '' + value + ' - ' + (value - (stockSeqNums[stockName] || 0));
-                            stockSeqNums[stockName] = value;
-                            break;
-                        default:
-                            cells[index + 1].innerHTML = value;
-                    }
+                    cells[index + 1].innerHTML = fieldName === 'TIMESTAMP' ? new Date(+value).toLocaleTimeString() : value;
                 }
             });
         },
@@ -122,11 +110,8 @@
         </div>
         <div class="col-3">
             <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Max bandwidth: <span id="bandwidthValue">500</span> kbit/s</b><br>
-                <input id="bandwidth" type="range"
-                       min="1" max="1000" step="1" value="500"
-                       style="background-color: red;"
-                >
+                <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
+                <input id="bandwidth" type="range" min="1" max="4000" step="1">
             </div>
             <span class="badge badge-primary">AAPL</span><br>
             <span class="badge badge-danger">IBM</span><br>
@@ -364,48 +349,44 @@
             .style('stroke', group.color);
     }
 
-    function update(date) {
+    function update(stockName, value, time) {
+        let date = new Date(+time);
 
         for (let name in groups) {
-            groups[name].path.attr('d', line);
+            // Add new values
+            let group = groups[name],
+                lastItem = group.data[group.data.length - 1],
+                updated = stockName === name ? {time: date, value: value}: lastItem ;
+
+            if (lastItem.time === startTime){
+                lastItem.time = date;
+            }
+
+            group.data.push(updated);
+            group.path.attr('d', line);
         }
 
         // Shift domain
-        x.domain([new Date(date - interval), date]);
+        x.domain([new Date(+time - interval), new Date(+time)]);
 
         // Slide x-axis left
         axis.transition()
-            //.duration(400)
-            .ease('ease')
-            .call(x.axis)
+            .duration(500)
+            .ease('ease-out')
+            .call(x.axis);
 
-        paths.transition().ease('ease');
+        paths.transition().duration(500).ease('linear');
+
+        // Remove oldest data point from each group
+        for (let name in groups){
+            groups[name].data.shift();
+        }
     }
-
-    const throttledUpdate =_.throttle(update, 400);
 
     // const updateThrottled = _.throttle(update, duration);
     const d3Listener = {
         onItemUpdate: (updateInfo) => {
-            let stockName = updateInfo.getItemName(),
-                value = updateInfo.getValue('ASK'),
-                date = new Date(+updateInfo.getValue('TIMESTAMP'));
-
-            for (let name in groups) {
-                // Add new values
-                let group = groups[name],
-                    lastItem = group.data[group.data.length - 1],
-                    updated = stockName === name ? {time: date, value: value}: lastItem;
-
-                if (lastItem.time === startTime){
-                    lastItem.time = date;
-                }
-
-                group.data.push(updated);
-                groups[name].data.shift();
-            }
-
-            throttledUpdate(date);
+            update(updateInfo.getItemName(), updateInfo.getValue('ASK'), updateInfo.getValue('TIMESTAMP'));
         }
     };
 </script>

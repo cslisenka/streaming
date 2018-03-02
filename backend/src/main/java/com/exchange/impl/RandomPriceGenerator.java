@@ -62,15 +62,34 @@ public class RandomPriceGenerator implements IPricingClient {
                     s.seqNum = 1;
                 } else {
                     s.seqNum++;
+                    double change = 5 * (r.nextBoolean() ? r.nextDouble() : (-1) * r.nextDouble());
+                    int sizeChange = r.nextBoolean() ? r.nextInt(100) : (-1) * r.nextInt(100);
                     if (r.nextBoolean()) {
-                        s.bid = s.bid + r.nextDouble();
-                        s.bidSize = s.bidSize + r.nextInt(100);
+                        s.bid = Math.abs(s.bid + change);
+                        s.bidSize = Math.abs(s.bidSize + sizeChange);
+
+                        if (s.bid > 100) {
+                            s.bid = 100;
+                        }
+                        if (s.bidSize > 10_000) {
+                            s.bidSize = 10000;
+                        }
                     } else if (r.nextBoolean()) {
-                        s.ask = s.bid + r.nextDouble();
-                        s.askSize = s.askSize + r.nextInt(100);
+                        s.ask = Math.abs(s.bid + change);
+                        s.askSize = Math.abs(s.askSize + sizeChange);
+
+                        if (s.ask > 100) {
+                            s.ask = 100;
+                        }
+                        if (s.askSize > 10_000) {
+                            s.askSize = 10000;
+                        }
                     } else if (r.nextBoolean() && r.nextBoolean() && r.nextBoolean()) {
                         // Very rare update
-                        s.last = (s.ask + s.bid) / 2 + r.nextDouble();
+                        s.last = Math.abs((s.ask + s.bid) / 2 + change);
+                        if (s.last > 100) {
+                            s.last = 100;
+                        }
                     }
                 }
 
@@ -81,10 +100,10 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("BID_SIZE",  s.bidSize + "");
                 data.put("ASK_SIZE", s.askSize + "");
                 data.put("SEQ_NUM", s.seqNum + "");
-                data.put("TIMESTAMP", LocalTime.now() + "");
+                data.put("TIMESTAMP", System.currentTimeMillis() + "");
                 listener.onData(symbol, data);
             });
-        }, 0, 100, TimeUnit.MILLISECONDS);
+        }, 0, 10, TimeUnit.MILLISECONDS);
     }
 
     @Override
