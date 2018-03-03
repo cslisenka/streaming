@@ -51,23 +51,53 @@
 <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 
 <script>
-    let myClient = new LightstreamerClient("http://localhost:8080", "WELCOME");
+    const config = {
+        lsURL : 'http://localhost:9090',
+        initialMaxBandwidth : 200,
+        initialMaxFrequency : 100
+    };
+
+    let myClient = new LightstreamerClient(config.lsURL, "WELCOME");
 
     myClient.addListener({
         onListenStart: (lsClient) => { console.log(`ON LISTEN START ${lsClient}`); },
-        onStatusChange: (newStatus) => { console.log(`STATUS:  ${newStatus}`); },
-        onServerError: (i, errorMessage) => { console.error(`ERROR ${i} ${errorMessage}`); },
+        onStatusChange: (newStatus) => {
+            console.log(`CONNECTION STATUS:  ${newStatus}`);
+            $('#connectionStatusValue').html(newStatus);
+        },
+        onServerError: (i, errorMessage) => {
+            console.error(`ERROR ${i} ${errorMessage}`);
+            let prevErrors = $('#errors').html();
+            $('#errors').html(prevErrors + "<br>" + errorMessage);
+        },
         onPropertyChange: function(property) {
-            if(property === 'maxBandwidth') {
-                console.log("PROPERTY " + property + "=" + myClient.connectionOptions.getMaxBandwidth());
-            } else {
-                console.log('PROPERTY changed ' + property);
+            let value = '?';
+            switch (property) {
+                case 'maxBandwidth':
+                    value = myClient.connectionOptions.getMaxBandwidth();
+                    break;
+                case 'sessionId':
+                    value = myClient.connectionOptions.getSessionId();
+                    break;
+                case 'serverSocketName':
+                    value = myClient.connectionOptions.getServerSocketName();
+                    break;
+                case 'serverInstanceAddress':
+                    value = myClient.connectionOptions.getServerInstanceAddress();
+                    break;
+                case 'keepaliveInterval':
+                    value = myClient.connectionOptions.getKeepaliveInterval();
+                    break;
             }
+
+            console.log(`ON LISTEN END ${property}=${value}`);
         },
         onListenEnd: (lsClient) => { console.log(`ON LISTEN END ${lsClient}`); },
         onShareAbort: () => { console.log('Share Abort'); }
     });
 
+    myClient.connectionOptions.setMaxBandwidth(config.initialMaxBandwidth);
+    myClient.connectionOptions.setForcedTransport("WS-POLLING");
     myClient.connect();
 
     const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
@@ -123,8 +153,27 @@
         </div>
         <div class="col-3">
             <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Max bandwidth: <span id="bandwidthValue">100</span> kbit/s</b><br>
-                <input id="bandwidth" type="range" min="1" max="200" step="1" value="100">
+                <b>Status: <span id="connectionStatusValue">?</span></b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Bandwidth: <span id="realBandwidthValue">?</span> kbit/s</b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
+                <input id="bandwidth" type="range" min="1" max="200" step="1">
+
+                <script>
+                    // Init bandwidth slider and label
+                    $('#bandwidthValue').html(config.initialMaxBandwidth);
+                    $('#bandwidth').val(config.initialMaxBandwidth);
+                    $('#bandwidth').change((e) => {
+                        let value = +e.target.value;
+                        if (value > 0) {
+                            $('#bandwidthValue').html(value);
+                            myClient.connectionOptions.setMaxBandwidth(value);
+                        }
+                    });
+                </script>
             </div>
             <span class="badge badge-primary">AAPL</span><br>
             <span class="badge badge-danger">IBM</span><br>
@@ -163,10 +212,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_AAPL">1</span> updates/s</b><br>
+                                    <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1" value="1">
+                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1">
                                 </div>
                             </div>
                     </td>
@@ -184,10 +233,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_IBM">1</span> updates/s</b>
+                                    <b><span id="frSTOCK_IBM"></span> updates/s</b>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1" value="1">
+                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1">
                                 </div>
                             </div>
                         </div>
@@ -206,10 +255,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_EPAM">1</span> updates/s</b><br>
+                                    <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1" value="1">
+                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1">
                                 </div>
                             </div>
                         </div>
@@ -228,10 +277,10 @@
                         <div class="alert alert-dark" role="alert">
                             <div class="row">
                                 <div class="col-6">
-                                    <b><span id="frSTOCK_TSLA">1</span> updates/s</b><br>
+                                    <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
                                 </div>
                                 <div class="col-6">
-                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1" value="1">
+                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1">
                                 </div>
                             </div>
                         </div>
@@ -243,6 +292,10 @@
             <!--button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
                 Buy/sell stocks
             </button-->
+        </div>
+        <div class="col-12">
+            <h2>Errors</h2>
+            <div id="errors"></div>
         </div>
 
         <!--div class="col-4">
@@ -399,24 +452,16 @@
 </script>
 
 <script>
-    // Init bandwidth slider
-    $('#bandwidth').change((e) => {
-        let value = +e.target.value;
-        if (value > 0) {
-            document.getElementById('bandwidthValue').innerHTML = '' + value;
-            myClient.connectionOptions.setMaxBandwidth(value);
-        }
-    });
-</script>
-
-<script>
     // Prepare subscriptions and sliders
     const subscriptions = stocks.map(function(s) {
         let sub = new Subscription('MERGE', s, fields);
         sub.setDataAdapter('STOCK');
         sub.addListener(tableListener);
         sub.addListener(d3Listener);
-        sub.setRequestedMaxFrequency(1);
+        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+
+        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
+        document.getElementById('sl' + s).value = config.initialMaxFrequency;
 
         $('#sl' + s).change((e) => {
             let value = +e.target.value;

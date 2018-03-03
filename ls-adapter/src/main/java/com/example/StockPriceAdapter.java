@@ -58,7 +58,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
 
     @Override
     public void onData(String symbol, Map<String, String> data) {
-        logger.info("sending " + symbol + " " + data);
+//        logger.info("sending " + symbol + " " + data);
         Object itemHandle = items.get(symbol);
         if (itemHandle != null) {
             listener.smartUpdate(itemHandle, data, false);
