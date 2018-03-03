@@ -5,13 +5,13 @@ import com.exchange.IPricingListener;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.time.LocalTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RandomPriceGenerator implements IPricingClient {
 
@@ -84,7 +84,11 @@ public class RandomPriceGenerator implements IPricingClient {
                         if (s.askSize > 10_000) {
                             s.askSize = 10000;
                         }
-                    } else if (r.nextBoolean() && r.nextBoolean() && r.nextBoolean()) {
+                    } else if (r.nextBoolean() &&
+                            r.nextBoolean() &&
+                            r.nextBoolean() &&
+                            r.nextBoolean() &&
+                            r.nextBoolean()) {
                         // Very rare update
                         s.last = Math.abs((s.ask + s.bid) / 2 + change);
                         if (s.last > 100) {
