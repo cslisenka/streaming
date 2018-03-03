@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-//@Service
+@Service
 public class StreamingHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingHandler.class);

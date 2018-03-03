@@ -1,9 +1,13 @@
 package com.example.demo;
 
+import com.exchange.IPricingClient;
+import com.exchange.impl.RandomPriceGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.PongMessage;
@@ -23,22 +27,22 @@ public class DemoApplication implements WebSocketConfigurer {
 
 	private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
 
-//	@Autowired
-//	private StreamingHandler streaming;
+	@Autowired
+	private StreamingHandler streaming;
 
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
 
-//	@Bean
-//	public IPricingClient client() {
-//	    return new RandomPriceGenerator();
-//    }
+	@Bean(initMethod = "start", destroyMethod = "shutdown")
+	public IPricingClient client() {
+	    return new RandomPriceGenerator();
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-        r.addHandler(new MyHandler(), "/websocket");
-//        r.addHandler(streaming, "/streaming");
+        r.addHandler(new MyHandler(), "/websocket").setAllowedOrigins("*");;
+        r.addHandler(streaming, "/streaming").setAllowedOrigins("*");;
     }
 
     static class MyHandler extends TextWebSocketHandler {
