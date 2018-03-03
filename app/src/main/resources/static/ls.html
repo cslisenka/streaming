@@ -41,6 +41,17 @@
         stroke: black;
         stroke-width: 1.5;
     }
+
+    .updated {
+        animation: colorchange 1s;
+        -webkit-animation: colorchange 1s;
+    }
+
+    @-webkit-keyframes colorchange {
+        0% {background: #ffffff;}
+        50% {background: #c2f2f2;}
+        100% {background: #ffffff;}
+    }
 </style>
 <script src="js/d3.v3.min.js"></script>
 <script src="js/lodash.js"></script>
@@ -111,7 +122,8 @@
             stockSeqNums[stockName] = stockSeqNums[stockName] || {};
 
             updateInfo.forEachChangedField((fieldName, fieldPos, value) => {
-                let index = fields.indexOf(fieldName);
+                let index = fields.indexOf(fieldName),
+                    cell = cells[index + 1];
 
                 if (index > -1) {
                     switch(fieldName){
@@ -119,15 +131,19 @@
                             let timestamp = new Date(+value);
                             let diff = new Date().getTime() - timestamp;
 
-                            cells[index + 1].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
+                            cell.innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
                             break;
                         case 'SEQ_NUM':
                             let diff2 = value - (stockSeqNums[stockName] || 0);
-                            cells[index + 1].innerHTML = `${value} <br> (${diff2})`;
+                            cell.innerHTML = `${value} <br> (${diff2})`;
                             stockSeqNums[stockName] = value;
                             break;
+                        case 'LAST':
+                            cell.innerHTML = `<span class="updated">${value}</span>`;
+                            break;
                         default:
-                            cells[index + 1].innerHTML = value;
+                            cell.innerHTML = value;
+                            break;
                     }
                 }
             });
@@ -206,7 +222,7 @@
                     <td>-</td>
                     <td class="table-warning">-</td>
                     <td>-</td>
-                    <td>-</td>
+                    <td id="123">-</td>
                     <td>-</td>
                     <td>
                         <div class="alert alert-dark" role="alert">

@@ -2,11 +2,13 @@ package com.example.demo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.*;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.PongMessage;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -21,13 +23,22 @@ public class DemoApplication implements WebSocketConfigurer {
 
 	private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
 
+//	@Autowired
+//	private StreamingHandler streaming;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
 
+//	@Bean
+//	public IPricingClient client() {
+//	    return new RandomPriceGenerator();
+//    }
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
         r.addHandler(new MyHandler(), "/websocket");
+//        r.addHandler(streaming, "/streaming");
     }
 
     static class MyHandler extends TextWebSocketHandler {

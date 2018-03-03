@@ -57,13 +57,14 @@
         initialMaxFrequency : 100
     };
 
+//    var ws = new WebSocket("ws://localhost:8081/streaming");
     var ws = new WebSocket("ws://localhost:8081/websocket");
     ws.onopen = (e) => {
         console.log(`onopen ${e}`);
 
-        ws.send("test");
-        ws.send("test");
-        ws.send("test");
+        ws.send("AAPL");
+        ws.send("IBM");
+        ws.send("EPAM");
     };
     ws.onmessage = (e) => { console.log(`onmessage ${e.data}`); };
     ws.onclose = (e) => { console.log(`onclose ${e}`); };
