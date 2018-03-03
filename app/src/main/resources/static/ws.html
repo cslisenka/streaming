@@ -1,0 +1,454 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+
+    <title>My stock portfolio</title>
+</head>
+<body>
+<style>
+    * {font-size: 16px;}
+
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    .graph .axis {
+        stroke-width: 1;
+    }
+
+    .graph .axis .tick line {
+        stroke: black;
+    }
+
+    .graph .axis .tick text {
+        fill: black;
+        font-size: 0.7em;
+    }
+
+    .graph .axis .domain {
+        fill: none;
+        stroke: black;
+    }
+
+    .graph .group {
+        fill: none;
+        stroke: black;
+        stroke-width: 1.5;
+    }
+</style>
+<script src="js/d3.v3.min.js"></script>
+<script src="js/lodash.js"></script>
+<!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
+<script src="js/lightstreamer.js"></script>
+<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+<script src="js/popper.min.js" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+<script>
+    const config = {
+        lsURL : 'http://localhost:9090',
+        initialMaxBandwidth : 200,
+        initialMaxFrequency : 100
+    };
+
+    var ws = new WebSocket("ws://localhost:8081/websocket");
+    ws.onopen = (e) => {
+        console.log(`onopen ${e}`);
+
+        ws.send("test");
+        ws.send("test");
+        ws.send("test");
+    };
+    ws.onmessage = (e) => { console.log(`onmessage ${e.data}`); };
+    ws.onclose = (e) => { console.log(`onclose ${e}`); };
+    ws.onerror = (e) => { console.log(`onerror ${e}`); }
+
+    let myClient = new LightstreamerClient(config.lsURL, "WELCOME");
+
+//    myClient.addListener({
+//        onListenStart: (lsClient) => { console.log(`ON LISTEN START ${lsClient}`); },
+//        onStatusChange: (newStatus) => {
+//            console.log(`CONNECTION STATUS:  ${newStatus}`);
+//            $('#connectionStatusValue').html(newStatus);
+//        },
+//        onServerError: (i, errorMessage) => {
+//            console.error(`ERROR ${i} ${errorMessage}`);
+//            let prevErrors = $('#errors').html();
+//            $('#errors').html(prevErrors + "<br>" + errorMessage);
+//        },
+//        onPropertyChange: function(property) {
+//            let value = '?';
+//            switch (property) {
+//                case 'maxBandwidth':
+//                    value = myClient.connectionOptions.getMaxBandwidth();
+//                    break;
+//                case 'sessionId':
+//                    value = myClient.connectionOptions.getSessionId();
+//                    break;
+//                case 'serverSocketName':
+//                    value = myClient.connectionOptions.getServerSocketName();
+//                    break;
+//                case 'serverInstanceAddress':
+//                    value = myClient.connectionOptions.getServerInstanceAddress();
+//                    break;
+//                case 'keepaliveInterval':
+//                    value = myClient.connectionOptions.getKeepaliveInterval();
+//                    break;
+//            }
+//
+//            console.log(`ON LISTEN END ${property}=${value}`);
+//        },
+//        onListenEnd: (lsClient) => { console.log(`ON LISTEN END ${lsClient}`); },
+//        onShareAbort: () => { console.log('Share Abort'); }
+//    });
+
+    myClient.connectionOptions.setMaxBandwidth(config.initialMaxBandwidth);
+    myClient.connectionOptions.setForcedTransport("WS-POLLING");
+//    myClient.connect();
+
+    const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
+    const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
+    let stockSeqNums = {};
+
+    let tableListener = {
+        onItemUpdate: (updateInfo) => {
+            let stockName = updateInfo.getItemName();
+            let cells = document.getElementById(stockName).cells;
+            stockSeqNums[stockName] = stockSeqNums[stockName] || {};
+
+            updateInfo.forEachChangedField((fieldName, fieldPos, value) => {
+                let index = fields.indexOf(fieldName);
+
+                if (index > -1) {
+                    switch(fieldName){
+                        case 'TIMESTAMP':
+                            let timestamp = new Date(+value);
+                            let diff = new Date().getTime() - timestamp;
+
+                            cells[index + 1].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
+                            break;
+                        case 'SEQ_NUM':
+                            let diff2 = value - (stockSeqNums[stockName] || 0);
+                            cells[index + 1].innerHTML = `${value} <br> (${diff2})`;
+                            stockSeqNums[stockName] = value;
+                            break;
+                        default:
+                            cells[index + 1].innerHTML = value;
+                    }
+                }
+            });
+        },
+        onSubscriptionError: function(code, message) {
+            console.log('Error : ' + code + ' ' + message);
+        },
+        onEndOfSnapshot: function (itemName, itemPos) {
+            console.log('onEndOfSnapshot ' + itemName);
+        },
+        onItemLostUpdates: function(itemName, itemPos, lostUpdates){
+            console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
+        }
+    };
+</script>
+
+<br>
+
+<div class="container">
+    <div class="row">
+        <div class="col-9">
+            <div class="graph"></div>
+        </div>
+        <div class="col-3">
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Status: <span id="connectionStatusValue">?</span></b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Bandwidth: <span id="realBandwidthValue">?</span> kbit/s</b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
+                <input id="bandwidth" type="range" min="1" max="200" step="1">
+
+                <script>
+                    // Init bandwidth slider and label
+                    $('#bandwidthValue').html(config.initialMaxBandwidth);
+                    $('#bandwidth').val(config.initialMaxBandwidth);
+                    $('#bandwidth').change((e) => {
+                        let value = +e.target.value;
+                        if (value > 0) {
+                            $('#bandwidthValue').html(value);
+                            myClient.connectionOptions.setMaxBandwidth(value);
+                        }
+                    });
+                </script>
+            </div>
+            <span class="badge badge-primary">AAPL</span><br>
+            <span class="badge badge-danger">IBM</span><br>
+            <span class="badge badge-success">EPAM</span><br>
+            <span class="badge badge-dark">TSLA</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">SYMBOL</th>
+                    <th scope="col">SEQ NUM</th>
+                    <th style="width: 100px" scope="col">BID</th>
+                    <th scope="col">BID SIZE</th>
+                    <th style="width: 100px" scope="col">ASK</th>
+                    <th scope="col">ASK SIZE</th>
+                    <th style="width: 100px" scope="col">LAST</th>
+                    <th scope="col">TIMESTAMP</th>
+                    <th style="width: 320px;">MAX FREQUENCY</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr id="STOCK_AAPL">
+                    <th>AAPL</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_IBM">
+                    <th>IBM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_IBM"></span> updates/s</b>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_EPAM">
+                    <th>EPAM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_TSLA">
+                    <th>TSLA</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-12">
+            <h2>Errors</h2>
+            <div id="errors"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const limit = 3200,  // points at the chart for a line
+        interval = 20 * 1000, //
+        now = Date.now(),
+        startTime = new Date(now - interval);
+
+    const width = 800,
+        height = 300;
+
+    const groups = {
+        STOCK_AAPL: {
+            value: 0,
+            color: 'blue',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_IBM: {
+            value: 0,
+            color: 'red',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_EPAM: {
+            value: 0,
+            color: 'green',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_TSLA: {
+            value: 0,
+            color: 'black',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        }
+    };
+
+    const x = d3.time.scale()
+        .domain([startTime, new Date(now)])
+        .range([0, width]);
+
+    const y = d3.scale.linear()
+        .domain([0, 100])
+        .range([height, 0]);
+
+    const line = d3.svg.line()
+        .x((d) => {
+            let xValue = x(d.time);
+            return xValue > width ? width : xValue|| 0;
+        })
+        .y((d) => y(d.value));
+
+    const svg = d3.select('.graph').append('svg')
+        .attr('class', 'chart')
+        .attr('width', width)
+        .attr('height', height + 50);
+
+    const axis = svg.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + height + ')')
+        .call(x.axis = d3.svg.axis().scale(x).orient('bottom'));
+
+    const paths = svg.append('g');
+
+    for (let name in groups) {
+        let group = groups[name];
+        group.path = paths.append('path')
+            .data([group.data])
+            .attr('class', name + ' group')
+            .style('stroke', group.color);
+    }
+
+    function update(date) {
+        for (let name in groups) {
+            groups[name].path.attr('d', line);
+        }
+
+        // Shift domain
+        x.domain([new Date(date - interval), date]);
+
+        // Slide x-axis left
+        axis.transition()
+            //.duration(400)
+            .ease('ease')
+            .call(x.axis)
+
+        paths.transition().ease('ease');
+    }
+
+    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
+
+    const d3Listener = {
+        onItemUpdate: (updateInfo) => {
+            let stockName = updateInfo.getItemName(),
+                value = updateInfo.getValue('ASK'),
+                date = new Date(+updateInfo.getValue('TIMESTAMP'));
+
+            for (let name in groups) {
+                // Add new values
+                let group = groups[name],
+                    lastItem = group.data[group.data.length - 1],
+                    updated = stockName === name ? {time: date, value: value}: lastItem;
+
+                if (lastItem.time === startTime){
+                    lastItem.time = date;
+                }
+
+                group.data.push(updated);
+                groups[name].data.shift();
+            }
+
+            throttledUpdate(date);
+        }
+    };
+</script>
+
+<script>
+    // Prepare subscriptions and sliders
+    const subscriptions = stocks.map(function(s) {
+        let sub = new Subscription('MERGE', s, fields);
+        sub.setDataAdapter('STOCK');
+        sub.addListener(tableListener);
+        sub.addListener(d3Listener);
+        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+
+        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
+        document.getElementById('sl' + s).value = config.initialMaxFrequency;
+
+        $('#sl' + s).change((e) => {
+            let value = +e.target.value;
+            if (value >= 0) {
+                document.getElementById('fr' + s).innerHTML = '' + value;
+                sub.setRequestedMaxFrequency(value);
+            }
+        });
+
+        return sub;
+    });
+
+    // Subscribe all
+//    subscriptions.forEach((sub) => myClient.subscribe(sub));
+</script>
+
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+<script src="js/popper.min.js" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
