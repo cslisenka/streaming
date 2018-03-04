@@ -16,6 +16,11 @@ public class JSONProtocol implements IProtocol {
 
     @Override
     public String toString(Map<String, String> response) {
-        return gson.toJson(response);
+        Map<String, String> dto = new HashMap<>();
+        response.forEach((k, v) -> {
+            dto.put(k.toLowerCase().replace("_", ""), v);
+        });
+
+        return gson.toJson(dto);
     }
 }

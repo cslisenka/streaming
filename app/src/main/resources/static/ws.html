@@ -74,12 +74,12 @@
             let t = string.split("|");
             return {
                 symbol    : t[0],
-                seqNum    : t[1],
+                seqnum    : t[1],
                 timestamp : t[2],
                 bid       : t[3],
                 ask       : t[4],
-                bidSize   : t[5],
-                askSize   : t[6],
+                bidsize   : t[5],
+                asksize   : t[6],
                 last      : t[7]
             };
         }
@@ -87,8 +87,9 @@
 
     const config = {
         host : 'localhost:8081',
-//        host : 'localhost:9091'
-        proto : positionProtocol
+//        host : 'localhost:9091',
+//        proto : positionProtocol
+        proto : jsonProtocol
     };
 
 
@@ -112,14 +113,14 @@
             let cells = document.getElementById(stockName).cells;
             stockSeqNums[stockName] = stockSeqNums[stockName] || {};
 
-            let diffSN = +result.seqNum - (stockSeqNums[stockName] || 0);
-            cells[1].innerHTML = `${result.seqNum} <br> (${diffSN})`;
-            stockSeqNums[stockName] = +result.seqNum;
+            let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
+            cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
+            stockSeqNums[stockName] = +result.seqnum;
 
             cells[2].innerHTML = result.bid;
-            cells[3].innerHTML = result.bidSize;
+            cells[3].innerHTML = result.bidsize;
             cells[4].innerHTML = result.ask;
-            cells[5].innerHTML = result.askSize;
+            cells[5].innerHTML = result.asksize;
             cells[6].innerHTML = result.last;
 
             let timestamp = new Date(+result.timestamp);
@@ -421,10 +422,5 @@
         d3Listener.onUpdate(result);
     };
 </script>
-
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
-<script src="js/popper.min.js" crossorigin="anonymous"></script>
-<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 </body>
 </html>
