@@ -8,7 +8,7 @@ import org.junit.Test;
 @Ignore
 public class RandomPriceGeneratorTest {
 
-    private RandomPriceGenerator gen = new RandomPriceGenerator();
+    private RandomPriceGenerator gen = new RandomPriceGenerator(10);
 
     @Before
     public void setUp() {

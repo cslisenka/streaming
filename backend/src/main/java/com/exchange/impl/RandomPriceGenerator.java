@@ -20,11 +20,14 @@ public class RandomPriceGenerator implements IPricingClient {
     private static final Logger log = LoggerFactory.getLogger(RandomPriceGenerator.class);
 
     private final NumberFormat formatter = new DecimalFormat("#0.00");
-
-    private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-
-    private Map<String, Snapshot> subscriptions = new ConcurrentHashMap<>();
+    private final int delay;
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final Map<String, Snapshot> subscriptions = new ConcurrentHashMap<>();
     private IPricingListener listener;
+
+    public RandomPriceGenerator(int delay) {
+        this.delay = delay;
+    }
 
     static class Snapshot {
         double bid;
@@ -117,7 +120,7 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("TIMESTAMP", System.currentTimeMillis() + "");
                 listener.onData(symbol, data);
             });
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        }, 0, delay, TimeUnit.MILLISECONDS);
     }
 
     @Override

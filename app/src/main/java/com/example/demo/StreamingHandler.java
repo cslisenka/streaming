@@ -25,10 +25,10 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
     private IProtocol proto;
     private Map<String, Set<WebSocketSession>> subscriptions = new HashMap<>();
 
-    public StreamingHandler(IProtocol proto, String logPrefix) {
+    public StreamingHandler(IProtocol proto, IPricingClient client, String logPrefix) {
+        this.client = client;
         this.log = LoggerFactory.getLogger(logPrefix);
         this.proto = proto;
-        client = new RandomPriceGenerator();
         client.setListener(this);
         client.start(); // TODO don't do it in constructor, please rewrite
         log.info("created");

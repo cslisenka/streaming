@@ -16,7 +16,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
 
     private ItemEventListener listener;
 
-    private final IPricingClient gen = new RandomPriceGenerator();
+    private final IPricingClient gen = new RandomPriceGenerator(10);
     private final Map<String, Object> items = new ConcurrentHashMap<>();
 
     @Override
