@@ -9,6 +9,6 @@ public interface IProtocol {
     String SUBSCRIBE = "subscribe";
     String UNSUBSCRIBE = "unsubscribe";
 
-    Map<String, String> fromString(String request);
+    Map<String, Object> fromString(String request);
     String toString(Map<String, String> response);
 }

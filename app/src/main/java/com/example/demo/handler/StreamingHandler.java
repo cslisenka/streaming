@@ -1,9 +1,8 @@
-package com.example.demo;
+package com.example.demo.handler;
 
 import com.example.demo.protocol.IProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
-import com.exchange.impl.RandomPriceGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
@@ -19,15 +18,14 @@ import java.util.Set;
 
 public class StreamingHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private final Logger log;
+    private static final Logger log = LoggerFactory.getLogger(StreamingHandler.class);
 
     private IPricingClient client;
     private IProtocol proto;
     private Map<String, Set<WebSocketSession>> subscriptions = new HashMap<>();
 
-    public StreamingHandler(IProtocol proto, IPricingClient client, String logPrefix) {
+    public StreamingHandler(IProtocol proto, IPricingClient client) {
         this.client = client;
-        this.log = LoggerFactory.getLogger(logPrefix);
         this.proto = proto;
         client.setListener(this);
         client.start(); // TODO don't do it in constructor, please rewrite
@@ -43,9 +41,9 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
         log.info("WS ({}) {}", s.getId(), m.getPayload());
 
-        Map<String, String> request = proto.fromString(m.getPayload());
-        String symbol = request.get(IProtocol.SYMBOL);
-        String command = request.get(IProtocol.COMMAND);
+        Map<String, Object> request = proto.fromString(m.getPayload());
+        String symbol = request.get(IProtocol.SYMBOL).toString();
+        String command = request.get(IProtocol.COMMAND).toString();
 
         if (IProtocol.SUBSCRIBE.equals(command)) {
             subscribe(symbol, s);

@@ -1,5 +1,7 @@
 package com.example.demo;
 
+import com.example.demo.handler.RateLimitHandler;
+import com.example.demo.handler.StreamingHandler;
 import com.example.demo.protocol.JSONProtocol;
 import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
@@ -23,12 +25,15 @@ public class DemoApplication implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-        r.addHandler(
-			new StreamingHandler(new JSONProtocol(), gen1(), "com.example.demo.STREAMING"),
-	"/streaming/json").setAllowedOrigins("*");
+		StreamingHandler jsonHandler = new StreamingHandler(new JSONProtocol(), gen1());
+        r.addHandler(jsonHandler, "/streaming/json").setAllowedOrigins("*");
 
-		r.addHandler(new StreamingHandler(new PositionBasedProtocol(), gen2(), "com.example.demo.POSITION"),
-				"/streaming/position").setAllowedOrigins("*");
+		StreamingHandler positionHandler = new StreamingHandler(new PositionBasedProtocol(), gen2());
+		r.addHandler(positionHandler, "/streaming/position").setAllowedOrigins("*");
+
+		RateLimitHandler rlHandler = new RateLimitHandler(new JSONProtocol(), gen3());
+		rlHandler.start();
+		r.addHandler(rlHandler, "/streaming/ratelimit").setAllowedOrigins("*");
     }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
@@ -38,6 +43,11 @@ public class DemoApplication implements WebSocketConfigurer {
 
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	public IPricingClient gen2() {
+		return new RandomPriceGenerator(10);
+	}
+
+	@Bean(initMethod = "start", destroyMethod = "shutdown")
+	public IPricingClient gen3() {
 		return new RandomPriceGenerator(10);
 	}
 }

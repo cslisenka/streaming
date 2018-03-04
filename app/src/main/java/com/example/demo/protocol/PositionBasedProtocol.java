@@ -9,8 +9,8 @@ public class PositionBasedProtocol implements IProtocol {
      * @param request S|SYMBOL - subscribe, U|SYMBOL - unsubscribe
      */
     @Override
-    public Map<String, String> fromString(String request) {
-        Map<String, String> dto = new HashMap<>();
+    public Map<String, Object> fromString(String request) {
+        Map<String, Object> dto = new HashMap<>();
         if (request.startsWith("S|")) {
             dto.put(COMMAND, SUBSCRIBE);
         } else if (request.startsWith("U|")) {

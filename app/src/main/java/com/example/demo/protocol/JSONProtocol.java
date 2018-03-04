@@ -10,7 +10,7 @@ public class JSONProtocol implements IProtocol {
     private final Gson gson = new Gson();
 
     @Override
-    public Map<String, String> fromString(String request) {
+    public Map<String, Object> fromString(String request) {
         return gson.fromJson(request, HashMap.class);
     }
 

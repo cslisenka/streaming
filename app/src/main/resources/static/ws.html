@@ -52,10 +52,12 @@
 
 <script>
     const jsonProtocol = {
-        url : '/streaming/json',
-        subscribe : (symbol) => { return JSON.stringify({
+        url : '/streaming/ratelimit',
+//        url : '/streaming/json',
+        subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
-                command : 'subscribe'
+                command : 'subscribe',
+                maxFrequency : frequency
             });
         },
         unsubscribe : (symbol) => { return JSON.stringify({
@@ -68,7 +70,7 @@
 
     const positionProtocol = {
         url : '/streaming/position',
-        subscribe : (symbol) => `S|${symbol}`,
+        subscribe : (symbol, frequency) => `S|${symbol}|${frequency}`,
         unsubscribe : (symbol) => `U|${symbol}`,
         parse : (string) => {
             let t = string.split("|");
@@ -100,7 +102,11 @@
 
     ws.onopen = (e) => {
         console.log(`onopen ${e}`);
-        stocks.forEach((s) => ws.send(config.proto.subscribe(s)));
+
+        ws.send(config.proto.subscribe('STOCK_AAPL', 1));
+        ws.send(config.proto.subscribe('STOCK_IBM', 2));
+        ws.send(config.proto.subscribe('STOCK_EPAM', 5));
+        ws.send(config.proto.subscribe('STOCK_TSLA', 10));
     };
 
     ws.onclose = (e) => { console.log(`onclose ${e}`); };
@@ -370,6 +376,8 @@
 
     const d3Listener = {
         onUpdate : (result) => {
+            console.log(result);
+
             let stockName = result.symbol,
                 value = result.ask,
                 date = new Date(+result.timestamp);
