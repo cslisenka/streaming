@@ -1,0 +1,450 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+
+    <title>My stock portfolio</title>
+</head>
+<body>
+<style>
+    * {font-size: 16px;}
+
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    .graph .axis {
+        stroke-width: 1;
+    }
+
+    .graph .axis .tick line {
+        stroke: black;
+    }
+
+    .graph .axis .tick text {
+        fill: black;
+        font-size: 0.7em;
+    }
+
+    .graph .axis .domain {
+        fill: none;
+        stroke: black;
+    }
+
+    .graph .group {
+        fill: none;
+        stroke: black;
+        stroke-width: 1.5;
+    }
+</style>
+<script src="js/d3.v3.min.js"></script>
+<script src="js/lodash.js"></script>
+<!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
+<script src="js/lightstreamer.js"></script>
+<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+<script src="js/popper.min.js" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+<script>
+    const jsonProtocol = {
+        url : '/streaming/bandwidth',
+//        url : '/streaming/json',
+        subscribe : (symbol, frequency) => { return JSON.stringify({
+                symbol : symbol,
+                command : 'subscribe',
+                maxFrequency : frequency
+            });
+        },
+        ack : (symbol) => {
+            return JSON.stringify({
+                symbol : symbol,
+                command : 'ack'
+            });
+        },
+        unsubscribe : (symbol) => { return JSON.stringify({
+                symbol : symbol,
+                command : 'unsubscribe'
+            });
+        },
+        parse : (string) => { return JSON.parse(string); }
+    };
+
+    const positionProtocol = {
+        url : '/streaming/position',
+        subscribe : (symbol, frequency) => `S|${symbol}|${frequency}`,
+        unsubscribe : (symbol) => `U|${symbol}`,
+        ack : (symbol, frequency) => `A|${symbol}`,
+        parse : (string) => {
+            let t = string.split("|");
+            return {
+                symbol    : t[0],
+                seqnum    : t[1],
+                timestamp : t[2],
+                bid       : t[3],
+                ask       : t[4],
+                bidsize   : t[5],
+                asksize   : t[6],
+                last      : t[7]
+            };
+        }
+    };
+
+    const config = {
+//        host : 'localhost:8081',
+        host : 'localhost:9091',
+//        proto : positionProtocol
+        proto : jsonProtocol
+    };
+
+
+    var ws = new WebSocket(`ws://${config.host}${config.proto.url}`);
+
+    const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
+    const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
+
+    ws.onopen = (e) => {
+        console.log(`onopen ${e}`);
+
+        ws.send(config.proto.subscribe('STOCK_AAPL', 100));
+        ws.send(config.proto.subscribe('STOCK_IBM', 100));
+        ws.send(config.proto.subscribe('STOCK_EPAM', 100));
+        ws.send(config.proto.subscribe('STOCK_TSLA', 100));
+    };
+
+    ws.onclose = (e) => { console.log(`onclose ${e}`); };
+    ws.onerror = (e) => { console.log(`onerror ${e}`); };
+
+    const ackListener = {
+        onUpdate : (result) => {
+            ws.send(config.proto.ack(result.symbol));
+        }
+    };
+
+    var stockSeqNums = {};
+    const tableListener = {
+        onUpdate : (result) => {
+            let stockName = result.symbol;
+            let cells = document.getElementById(stockName).cells;
+            stockSeqNums[stockName] = stockSeqNums[stockName] || {};
+
+            let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
+            cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
+            stockSeqNums[stockName] = +result.seqnum;
+
+            cells[2].innerHTML = result.bid;
+            cells[3].innerHTML = result.bidsize;
+            cells[4].innerHTML = result.ask;
+            cells[5].innerHTML = result.asksize;
+            cells[6].innerHTML = result.last;
+
+            let timestamp = new Date(+result.timestamp);
+            let diff = new Date().getTime() - timestamp;
+            cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
+        }
+    };
+</script>
+
+<br>
+
+<div class="container">
+    <div class="row">
+        <div class="col-9">
+            <div class="graph"></div>
+        </div>
+        <div class="col-3">
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Status: <span id="connectionStatusValue">?</span></b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Bandwidth: <span id="realBandwidthValue">?</span> kbit/s</b><br>
+            </div>
+            <div class="alert alert-dark" style="width: 250px;" role="alert">
+                <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
+                <input id="bandwidth" type="range" min="1" max="200" step="1">
+
+                <script>
+                    // Init bandwidth slider and label
+//                    $('#bandwidthValue').html(config.initialMaxBandwidth);
+//                    $('#bandwidth').val(config.initialMaxBandwidth);
+//                    $('#bandwidth').change((e) => {
+//                        let value = +e.target.value;
+//                        if (value > 0) {
+//                            $('#bandwidthValue').html(value);
+//                            myClient.connectionOptions.setMaxBandwidth(value);
+//                        }
+//                    });
+                </script>
+            </div>
+            <span class="badge badge-primary">AAPL</span><br>
+            <span class="badge badge-danger">IBM</span><br>
+            <span class="badge badge-success">EPAM</span><br>
+            <span class="badge badge-dark">TSLA</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">SYMBOL</th>
+                    <th scope="col">SEQ NUM</th>
+                    <th style="width: 100px" scope="col">BID</th>
+                    <th scope="col">BID SIZE</th>
+                    <th style="width: 100px" scope="col">ASK</th>
+                    <th scope="col">ASK SIZE</th>
+                    <th style="width: 100px" scope="col">LAST</th>
+                    <th scope="col">TIMESTAMP</th>
+                    <th style="width: 320px;">MAX FREQUENCY</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr id="STOCK_AAPL">
+                    <th>AAPL</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_IBM">
+                    <th>IBM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_IBM"></span> updates/s</b>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_EPAM">
+                    <th>EPAM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="STOCK_TSLA">
+                    <th>TSLA</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <div class="alert alert-dark" role="alert">
+                            <div class="row">
+                                <div class="col-6">
+                                    <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
+                                </div>
+                                <div class="col-6">
+                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-12">
+            <h2>Errors</h2>
+            <div id="errors"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const limit = 8000,  // points at the chart for a line
+        interval = 20 * 1000, //
+        now = Date.now(),
+        startTime = new Date(now - interval);
+
+    const width = 800,
+        height = 300;
+
+    const groups = {
+        STOCK_AAPL: {
+            value: 0,
+            color: 'blue',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_IBM: {
+            value: 0,
+            color: 'red',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_EPAM: {
+            value: 0,
+            color: 'green',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        },
+        STOCK_TSLA: {
+            value: 0,
+            color: 'black',
+            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
+        }
+    };
+
+    const x = d3.time.scale()
+        .domain([startTime, new Date(now)])
+        .range([0, width]);
+
+    const y = d3.scale.linear()
+        .domain([0, 100])
+        .range([height, 0]);
+
+    const line = d3.svg.line()
+        .x((d) => {
+            let xValue = x(d.time);
+            return xValue > width ? width : xValue|| 0;
+        })
+        .y((d) => y(d.value));
+
+    const svg = d3.select('.graph').append('svg')
+        .attr('class', 'chart')
+        .attr('width', width)
+        .attr('height', height + 50);
+
+    const axis = svg.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + height + ')')
+        .call(x.axis = d3.svg.axis().scale(x).orient('bottom'));
+
+    const paths = svg.append('g');
+
+    for (let name in groups) {
+        let group = groups[name];
+        group.path = paths.append('path')
+            .data([group.data])
+            .attr('class', name + ' group')
+            .style('stroke', group.color);
+    }
+
+    function update(date) {
+        for (let name in groups) {
+            groups[name].path.attr('d', line);
+        }
+
+        // Shift domain
+        x.domain([new Date(date - interval), date]);
+
+        // Slide x-axis left
+        axis.transition()
+            //.duration(400)
+            .ease('ease')
+            .call(x.axis)
+
+        paths.transition().ease('ease');
+    }
+
+    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
+
+    const d3Listener = {
+        onUpdate : (result) => {
+//            console.log(result);
+
+            let stockName = result.symbol,
+                value = result.ask,
+                date = new Date(+result.timestamp);
+
+            for (let name in groups) {
+                // Add new values
+                let group = groups[name],
+                    lastItem = group.data[group.data.length - 1],
+                    updated = stockName === name ? {time: date, value: value}: lastItem;
+
+                if (lastItem.time === startTime){
+                    lastItem.time = date;
+                }
+
+                group.data.push(updated);
+                groups[name].data.shift();
+            }
+
+            throttledUpdate(date);
+        }
+    };
+</script>
+
+<script>
+    // Prepare subscriptions and sliders
+//    const subscriptions = stocks.map(function(s) {
+//        let sub = new Subscription('MERGE', s, fields);
+//        sub.setDataAdapter('STOCK');
+//        sub.addListener(tableListener);
+//        sub.addListener(d3Listener);
+//        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+//
+//        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
+//        document.getElementById('sl' + s).value = config.initialMaxFrequency;
+//
+//        $('#sl' + s).change((e) => {
+//            let value = +e.target.value;
+//            if (value >= 0) {
+//                document.getElementById('fr' + s).innerHTML = '' + value;
+//                sub.setRequestedMaxFrequency(value);
+//            }
+//        });
+//
+//        return sub;
+//    });
+
+
+
+    ws.onmessage = (e) => {
+        let result = config.proto.parse(e.data);
+        tableListener.onUpdate(result);
+        d3Listener.onUpdate(result);
+        ackListener.onUpdate(result);
+    };
+</script>
+</body>
+</html>

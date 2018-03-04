@@ -16,11 +16,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class RateLimitHandler extends TextWebSocketHandler implements IPricingListener {
+public class BandwidthAwareRateLimitHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(RateLimitHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(BandwidthAwareRateLimitHandler.class);
 
     private IPricingClient client;
     private IProtocol proto;
@@ -28,11 +32,20 @@ public class RateLimitHandler extends TextWebSocketHandler implements IPricingLi
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(8);
 
     static class Subscription {
-        Map<WebSocketSession, RateLimiter> sessions = new HashMap<>();
+        Map<WebSocketSession, SessionDetails> sessions = new HashMap<>();
         Map<String, String> snapshot = new HashMap<>();
     }
 
-    public RateLimitHandler(IProtocol proto, IPricingClient client) {
+    static class SessionDetails {
+        SessionDetails(double maxFrequency) {
+            rateLimiter = RateLimiter.create(maxFrequency);
+        }
+
+        RateLimiter rateLimiter;
+        AtomicBoolean ack = new AtomicBoolean(true);
+    }
+
+    public BandwidthAwareRateLimitHandler(IProtocol proto, IPricingClient client) {
         this.client = client;
         this.proto = proto;
         client.setListener(this);
@@ -46,11 +59,14 @@ public class RateLimitHandler extends TextWebSocketHandler implements IPricingLi
                 Map<String, String> data = new HashMap<>();
 
                 synchronized (sub) {
-                    sub.sessions.forEach(((session, rateLimiter) -> {
-                        if (rateLimiter.tryAcquire()) {
+                    sub.sessions.forEach(((session, details) -> {
+                        boolean ack = details.ack.getAndSet(false);
+                        if (details.rateLimiter.tryAcquire() && ack) {
                             sessions.add(session);
                             data.put(IProtocol.SYMBOL, symbol);
                             data.putAll(sub.snapshot);
+                        } else {
+                            log.info("Skipping update for {} {}", symbol, session);
                         }
                     }));
                 }
@@ -80,17 +96,27 @@ public class RateLimitHandler extends TextWebSocketHandler implements IPricingLi
         Map<String, Object> request = proto.fromString(m.getPayload());
         String symbol = request.get(IProtocol.SYMBOL).toString();
         String command = request.get(IProtocol.COMMAND).toString();
-        double frequency = Double.MAX_VALUE;
-        if (request.containsKey("maxFrequency")) {
-            frequency = (Double) request.get("maxFrequency");
-        }
 
         if (IProtocol.SUBSCRIBE.equals(command)) {
+            double frequency = Double.MAX_VALUE;
+            if (request.containsKey("maxFrequency")) {
+                frequency = (Double) request.get("maxFrequency");
+            }
+
             subscribe(symbol, s, frequency);
         }
 
         if (IProtocol.UNSUBSCRIBE.equals(command)) {
             unsubscribe(symbol, s);
+        }
+
+        if ("ack".equals(command)) {
+            Subscription sub = subscriptions.get(symbol);
+            if (sub != null) {
+                synchronized (sub) {
+                    sub.sessions.get(s).ack.set(true);
+                }
+            }
         }
     }
 
@@ -103,7 +129,7 @@ public class RateLimitHandler extends TextWebSocketHandler implements IPricingLi
 
         boolean doSusbcribe = false;
         synchronized (sub) {
-            sub.sessions.put(session, RateLimiter.create(frequency));
+            sub.sessions.put(session, new SessionDetails(frequency));
             if (sub.sessions.size() == 1) {
                 doSusbcribe = true;
             }

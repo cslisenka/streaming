@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.handler.BandwidthAwareRateLimitHandler;
 import com.example.demo.handler.RateLimitHandler;
 import com.example.demo.handler.StreamingHandler;
 import com.example.demo.protocol.JSONProtocol;
@@ -34,6 +35,10 @@ public class DemoApplication implements WebSocketConfigurer {
 		RateLimitHandler rlHandler = new RateLimitHandler(new JSONProtocol(), gen3());
 		rlHandler.start();
 		r.addHandler(rlHandler, "/streaming/ratelimit").setAllowedOrigins("*");
+
+		BandwidthAwareRateLimitHandler rlAckHandler = new BandwidthAwareRateLimitHandler(new JSONProtocol(), gen4());
+		rlAckHandler.start();
+		r.addHandler(rlAckHandler, "/streaming/bandwidth").setAllowedOrigins("*");
     }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
@@ -48,6 +53,11 @@ public class DemoApplication implements WebSocketConfigurer {
 
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	public IPricingClient gen3() {
+		return new RandomPriceGenerator(10);
+	}
+
+	@Bean(initMethod = "start", destroyMethod = "shutdown")
+	public IPricingClient gen4() {
 		return new RandomPriceGenerator(10);
 	}
 }
