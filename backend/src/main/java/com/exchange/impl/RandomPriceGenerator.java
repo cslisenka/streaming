@@ -2,6 +2,8 @@ package com.exchange.impl;
 
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -14,6 +16,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class RandomPriceGenerator implements IPricingClient {
+
+    private static final Logger log = LoggerFactory.getLogger(RandomPriceGenerator.class);
 
     private final NumberFormat formatter = new DecimalFormat("#0.00");
 
@@ -48,6 +52,7 @@ public class RandomPriceGenerator implements IPricingClient {
 
     @Override
     public void start() {
+        log.info("starting");
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
             subscriptions.forEach((symbol, s) -> {

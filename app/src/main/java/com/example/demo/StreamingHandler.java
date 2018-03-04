@@ -1,37 +1,37 @@
 package com.example.demo;
 
+import com.example.demo.protocol.IProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import com.exchange.impl.RandomPriceGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-@Service
 public class StreamingHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(StreamingHandler.class);
+    private final Logger log;
 
-    @Autowired
     private IPricingClient client;
-
+    private IProtocol proto;
     private Map<String, Set<WebSocketSession>> subscriptions = new HashMap<>();
 
-    @PostConstruct
-    public void init() {
+    public StreamingHandler(IProtocol proto, String logPrefix) {
+        this.log = LoggerFactory.getLogger(logPrefix);
+        this.proto = proto;
+        client = new RandomPriceGenerator();
         client.setListener(this);
+        client.start(); // TODO don't do it in constructor, please rewrite
+        log.info("created");
     }
 
     @Override
@@ -41,12 +41,11 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.info("WS ({}) {}", s.getId(), m);
+        log.info("WS ({}) {}", s.getId(), m.getPayload());
 
-        // TODO handle unsubscribe
-        // TODO parse symbol
-        String symbol = m.getPayload();
-        boolean isSubscribe = true;
+        Map<String, String> request = proto.fromString(m.getPayload());
+        String symbol = request.get(IProtocol.SYMBOL);
+        boolean isSubscribe = request.get(IProtocol.COMMAND).equals(IProtocol.SUBSCRIBE);
 
         boolean doSubscribe = false;
         boolean doUnsubscribe = false;
@@ -86,8 +85,8 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
     }
 
     @Override
-    public void onData(String symbol, Map<String, String> d) {
-        log.debug("SEND {} {}", symbol, d);
+    public void onData(String symbol, Map<String, String> data) {
+        log.debug("SEND {} {}", symbol, data);
 
         Set<WebSocketSession> sessions = new HashSet<>();
         synchronized (subscriptions) {
@@ -96,9 +95,10 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
 
         sessions.forEach((s) -> {
             try {
-                s.sendMessage(new TextMessage(symbol + "|" + d));
+                data.put(IProtocol.SYMBOL, symbol);
+                s.sendMessage(new TextMessage(proto.toString(data)));
             } catch (IOException e) {
-                log.error("Failed to send message", e);
+                log.error("Failed toString send message", e);
             }
         });
     }

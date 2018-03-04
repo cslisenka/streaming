@@ -52,109 +52,80 @@
 
 <script>
     const config = {
-        lsURL : 'http://localhost:9090',
-        initialMaxBandwidth : 200,
-        initialMaxFrequency : 100
     };
 
-    var ws = new WebSocket("ws://localhost:8081/streaming");
-//    var ws = new WebSocket("ws://localhost:8081/websocket");
-    ws.onopen = (e) => {
-        console.log(`onopen ${e}`);
-
-        ws.send("AAPL");
-        ws.send("IBM");
-        ws.send("EPAM");
+    const jsonProtocol = {
+        url : 'ws://localhost:8081/streaming/json',
+        subscribe : (symbol) => { return JSON.stringify({
+                symbol : symbol,
+                command : 'subscribe'
+            });
+        },
+        unsubscribe : (symbol) => { return JSON.stringify({
+                symbol : symbol,
+                command : 'unsubscribe'
+            });
+        },
+        parse : (string) => { return JSON.parse(string); }
     };
-    ws.onmessage = (e) => { console.log(`onmessage ${e.data}`); };
-    ws.onclose = (e) => { console.log(`onclose ${e}`); };
-    ws.onerror = (e) => { console.log(`onerror ${e}`); }
 
-    let myClient = new LightstreamerClient(config.lsURL, "WELCOME");
+    const positionProtocol = {
+        url : 'ws://localhost:8081/streaming/position',
+        subscribe : (symbol) => `S|${symbol}`,
+        unsubscribe : (symbol) => `U|${symbol}`,
+        parse : (string) => {
+            let t = string.split("|");
+            return {
+                symbol    : t[0],
+                seqNum    : t[1],
+                timestamp : t[2],
+                bid       : t[3],
+                ask       : t[4],
+                bidSize   : t[5],
+                askSize   : t[6],
+                last      : t[7]
+            };
+        }
+    };
 
-//    myClient.addListener({
-//        onListenStart: (lsClient) => { console.log(`ON LISTEN START ${lsClient}`); },
-//        onStatusChange: (newStatus) => {
-//            console.log(`CONNECTION STATUS:  ${newStatus}`);
-//            $('#connectionStatusValue').html(newStatus);
-//        },
-//        onServerError: (i, errorMessage) => {
-//            console.error(`ERROR ${i} ${errorMessage}`);
-//            let prevErrors = $('#errors').html();
-//            $('#errors').html(prevErrors + "<br>" + errorMessage);
-//        },
-//        onPropertyChange: function(property) {
-//            let value = '?';
-//            switch (property) {
-//                case 'maxBandwidth':
-//                    value = myClient.connectionOptions.getMaxBandwidth();
-//                    break;
-//                case 'sessionId':
-//                    value = myClient.connectionOptions.getSessionId();
-//                    break;
-//                case 'serverSocketName':
-//                    value = myClient.connectionOptions.getServerSocketName();
-//                    break;
-//                case 'serverInstanceAddress':
-//                    value = myClient.connectionOptions.getServerInstanceAddress();
-//                    break;
-//                case 'keepaliveInterval':
-//                    value = myClient.connectionOptions.getKeepaliveInterval();
-//                    break;
-//            }
-//
-//            console.log(`ON LISTEN END ${property}=${value}`);
-//        },
-//        onListenEnd: (lsClient) => { console.log(`ON LISTEN END ${lsClient}`); },
-//        onShareAbort: () => { console.log('Share Abort'); }
-//    });
+    const proto = positionProtocol;
 
-    myClient.connectionOptions.setMaxBandwidth(config.initialMaxBandwidth);
-    myClient.connectionOptions.setForcedTransport("WS-POLLING");
-//    myClient.connect();
+    var ws = new WebSocket(proto.url);
 
     const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
     const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
-    let stockSeqNums = {};
 
-    let tableListener = {
-        onItemUpdate: (updateInfo) => {
-            let stockName = updateInfo.getItemName();
+    ws.onopen = (e) => {
+        console.log(`onopen ${e}`);
+        stocks.forEach((s) => ws.send(proto.subscribe(s)));
+    };
+
+    var stockSeqNums = {};
+
+    const tableListener = {
+        onUpdate : (result) => {
+            let stockName = result.symbol;
             let cells = document.getElementById(stockName).cells;
             stockSeqNums[stockName] = stockSeqNums[stockName] || {};
 
-            updateInfo.forEachChangedField((fieldName, fieldPos, value) => {
-                let index = fields.indexOf(fieldName);
+            let diffSN = +result.seqNum - (stockSeqNums[stockName] || 0);
+            cells[1].innerHTML = `${result.seqNum} <br> (${diffSN})`;
+            stockSeqNums[stockName] = +result.seqNum;
 
-                if (index > -1) {
-                    switch(fieldName){
-                        case 'TIMESTAMP':
-                            let timestamp = new Date(+value);
-                            let diff = new Date().getTime() - timestamp;
+            cells[2].innerHTML = result.bid;
+            cells[3].innerHTML = result.bidSize;
+            cells[4].innerHTML = result.ask;
+            cells[5].innerHTML = result.askSize;
+            cells[6].innerHTML = result.last;
 
-                            cells[index + 1].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
-                            break;
-                        case 'SEQ_NUM':
-                            let diff2 = value - (stockSeqNums[stockName] || 0);
-                            cells[index + 1].innerHTML = `${value} <br> (${diff2})`;
-                            stockSeqNums[stockName] = value;
-                            break;
-                        default:
-                            cells[index + 1].innerHTML = value;
-                    }
-                }
-            });
-        },
-        onSubscriptionError: function(code, message) {
-            console.log('Error : ' + code + ' ' + message);
-        },
-        onEndOfSnapshot: function (itemName, itemPos) {
-            console.log('onEndOfSnapshot ' + itemName);
-        },
-        onItemLostUpdates: function(itemName, itemPos, lostUpdates){
-            console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
+            let timestamp = new Date(+result.timestamp);
+            let diff = new Date().getTime() - timestamp;
+            cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
         }
     };
+
+    ws.onclose = (e) => { console.log(`onclose ${e}`); };
+    ws.onerror = (e) => { console.log(`onerror ${e}`); };
 </script>
 
 <br>
@@ -177,15 +148,15 @@
 
                 <script>
                     // Init bandwidth slider and label
-                    $('#bandwidthValue').html(config.initialMaxBandwidth);
-                    $('#bandwidth').val(config.initialMaxBandwidth);
-                    $('#bandwidth').change((e) => {
-                        let value = +e.target.value;
-                        if (value > 0) {
-                            $('#bandwidthValue').html(value);
-                            myClient.connectionOptions.setMaxBandwidth(value);
-                        }
-                    });
+//                    $('#bandwidthValue').html(config.initialMaxBandwidth);
+//                    $('#bandwidth').val(config.initialMaxBandwidth);
+//                    $('#bandwidth').change((e) => {
+//                        let value = +e.target.value;
+//                        if (value > 0) {
+//                            $('#bandwidthValue').html(value);
+//                            myClient.connectionOptions.setMaxBandwidth(value);
+//                        }
+//                    });
                 </script>
             </div>
             <span class="badge badge-primary">AAPL</span><br>
@@ -396,10 +367,10 @@
     const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
 
     const d3Listener = {
-        onItemUpdate: (updateInfo) => {
-            let stockName = updateInfo.getItemName(),
-                value = updateInfo.getValue('ASK'),
-                date = new Date(+updateInfo.getValue('TIMESTAMP'));
+        onUpdate : (result) => {
+            let stockName = result.symbol,
+                value = result.ask,
+                date = new Date(+result.timestamp);
 
             for (let name in groups) {
                 // Add new values
@@ -422,29 +393,32 @@
 
 <script>
     // Prepare subscriptions and sliders
-    const subscriptions = stocks.map(function(s) {
-        let sub = new Subscription('MERGE', s, fields);
-        sub.setDataAdapter('STOCK');
-        sub.addListener(tableListener);
-        sub.addListener(d3Listener);
-        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+//    const subscriptions = stocks.map(function(s) {
+//        let sub = new Subscription('MERGE', s, fields);
+//        sub.setDataAdapter('STOCK');
+//        sub.addListener(tableListener);
+//        sub.addListener(d3Listener);
+//        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+//
+//        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
+//        document.getElementById('sl' + s).value = config.initialMaxFrequency;
+//
+//        $('#sl' + s).change((e) => {
+//            let value = +e.target.value;
+//            if (value >= 0) {
+//                document.getElementById('fr' + s).innerHTML = '' + value;
+//                sub.setRequestedMaxFrequency(value);
+//            }
+//        });
+//
+//        return sub;
+//    });
 
-        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
-        document.getElementById('sl' + s).value = config.initialMaxFrequency;
-
-        $('#sl' + s).change((e) => {
-            let value = +e.target.value;
-            if (value >= 0) {
-                document.getElementById('fr' + s).innerHTML = '' + value;
-                sub.setRequestedMaxFrequency(value);
-            }
-        });
-
-        return sub;
-    });
-
-    // Subscribe all
-//    subscriptions.forEach((sub) => myClient.subscribe(sub));
+    ws.onmessage = (e) => {
+        let result = proto.parse(e.data);
+        tableListener.onUpdate(result);
+        d3Listener.onUpdate(result);
+    };
 </script>
 
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
