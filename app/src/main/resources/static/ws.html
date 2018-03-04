@@ -51,11 +51,8 @@
 <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 
 <script>
-    const config = {
-    };
-
     const jsonProtocol = {
-        url : 'ws://localhost:8081/streaming/json',
+        url : '/streaming/json',
         subscribe : (symbol) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe'
@@ -70,7 +67,7 @@
     };
 
     const positionProtocol = {
-        url : 'ws://localhost:8081/streaming/position',
+        url : '/streaming/position',
         subscribe : (symbol) => `S|${symbol}`,
         unsubscribe : (symbol) => `U|${symbol}`,
         parse : (string) => {
@@ -88,20 +85,27 @@
         }
     };
 
-    const proto = positionProtocol;
+    const config = {
+        host : 'localhost:8081',
+//        host : 'localhost:9091'
+        proto : positionProtocol
+    };
 
-    var ws = new WebSocket(proto.url);
+
+    var ws = new WebSocket(`ws://${config.host}${config.proto.url}`);
 
     const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
     const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
 
     ws.onopen = (e) => {
         console.log(`onopen ${e}`);
-        stocks.forEach((s) => ws.send(proto.subscribe(s)));
+        stocks.forEach((s) => ws.send(config.proto.subscribe(s)));
     };
 
-    var stockSeqNums = {};
+    ws.onclose = (e) => { console.log(`onclose ${e}`); };
+    ws.onerror = (e) => { console.log(`onerror ${e}`); };
 
+    var stockSeqNums = {};
     const tableListener = {
         onUpdate : (result) => {
             let stockName = result.symbol;
@@ -123,9 +127,6 @@
             cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
         }
     };
-
-    ws.onclose = (e) => { console.log(`onclose ${e}`); };
-    ws.onerror = (e) => { console.log(`onerror ${e}`); };
 </script>
 
 <br>
@@ -281,7 +282,7 @@
 </div>
 
 <script>
-    const limit = 3200,  // points at the chart for a line
+    const limit = 8000,  // points at the chart for a line
         interval = 20 * 1000, //
         now = Date.now(),
         startTime = new Date(now - interval);
@@ -415,7 +416,7 @@
 //    });
 
     ws.onmessage = (e) => {
-        let result = proto.parse(e.data);
+        let result = config.proto.parse(e.data);
         tableListener.onUpdate(result);
         d3Listener.onUpdate(result);
     };

@@ -38,11 +38,13 @@ public class RandomPriceGenerator implements IPricingClient {
     @Override
     public void subscribe(String symbol) {
         subscriptions.put(symbol, new Snapshot());
+        log.info("{}", subscriptions.toString());
     }
 
     @Override
     public void unsubscribe(String symbol) {
         subscriptions.remove(symbol);
+        log.info("{}", subscriptions.toString());
     }
 
     @Override
@@ -55,7 +57,10 @@ public class RandomPriceGenerator implements IPricingClient {
         log.info("starting");
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
+            log.debug("subscriptions {}", subscriptions.size());
             subscriptions.forEach((symbol, s) -> {
+                log.debug("generating for {}", symbol);
+
                 if (s.seqNum == 0) {
                     // New subscription
                     double basePrice = r.nextDouble() * 100;
@@ -112,7 +117,7 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("TIMESTAMP", System.currentTimeMillis() + "");
                 listener.onData(symbol, data);
             });
-        }, 0, 10, TimeUnit.MILLISECONDS);
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     @Override

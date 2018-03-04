@@ -45,41 +45,55 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
 
         Map<String, String> request = proto.fromString(m.getPayload());
         String symbol = request.get(IProtocol.SYMBOL);
-        boolean isSubscribe = request.get(IProtocol.COMMAND).equals(IProtocol.SUBSCRIBE);
+        String command = request.get(IProtocol.COMMAND);
 
-        boolean doSubscribe = false;
-        boolean doUnsubscribe = false;
+        if (IProtocol.SUBSCRIBE.equals(command)) {
+            subscribe(symbol, s);
+        }
 
+        if (IProtocol.UNSUBSCRIBE.equals(command)) {
+            unsubscribe(symbol, s);
+        }
+
+        log.info(subscriptions.toString());
+    }
+
+    private void subscribe(String symbol, WebSocketSession session) {
+        boolean doSusbcribe = false;
         synchronized (subscriptions) {
             Set<WebSocketSession> sessions = subscriptions.get(symbol);
+            if (sessions == null) {
+                sessions = new HashSet<>();
+                subscriptions.put(symbol, sessions);
+            }
 
-            if (isSubscribe) {
-                if (sessions == null) {
-                    sessions = new HashSet<>();
-                    subscriptions.put(symbol, sessions);
-                }
+            sessions.add(session);
+            if (sessions.size() == 1) {
+                doSusbcribe = true;
+            }
+        }
 
-                sessions.add(s);
+        if (doSusbcribe) {
+            log.info("subscribing {}", symbol);
+            client.subscribe(symbol);
+        }
+    }
 
-                if (sessions.size() == 1) {
-                    doSubscribe = true;
-                }
-            } else {
-                if (sessions != null) {
-                    sessions.remove(s);
-                    if (sessions.size() == 0) {
-                        subscriptions.remove(symbol);
-                        doUnsubscribe = true;
-                    }
+    private void unsubscribe(String symbol, WebSocketSession session) {
+        boolean doUnsubscribe = false;
+        synchronized (subscriptions) {
+            Set<WebSocketSession> sessions = subscriptions.get(symbol);
+            if (sessions != null) {
+                sessions.remove(session);
+                if (sessions.size() == 0) {
+                    subscriptions.remove(symbol);
+                    doUnsubscribe = true;
                 }
             }
         }
 
-        if (doSubscribe) {
-            client.subscribe(symbol);
-        }
-
         if (doUnsubscribe) {
+            log.info("unsubscribing {}", symbol);
             client.unsubscribe(symbol);
         }
     }
@@ -112,10 +126,20 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
     public void afterConnectionClosed(WebSocketSession s, CloseStatus st) throws Exception {
         log.info("WS connection closed {}, status {}", s.getId(), st);
 
-        synchronized (subscriptions) {
-            subscriptions.values().forEach(sessions -> {
-                sessions.remove(s);
-            });
+        try {
+            Set<String> subscribedSymbols = new HashSet<>();
+            synchronized (subscriptions) {
+                subscriptions.forEach((symbol, sessions) -> {
+                    if (sessions.contains(s)) {
+                        subscribedSymbols.add(symbol);
+                    }
+                });
+            }
+
+            subscribedSymbols.forEach(symbol -> unsubscribe(symbol, s));
+            log.info(subscriptions.toString());
+        } catch (Exception e) {
+            log.error("error", e);
         }
     }
 }

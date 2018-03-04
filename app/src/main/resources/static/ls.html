@@ -440,7 +440,7 @@
         paths.transition().ease('ease');
     }
 
-    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
+    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not toString kill UI
 
     const d3Listener = {
         onItemUpdate: (updateInfo) => {
