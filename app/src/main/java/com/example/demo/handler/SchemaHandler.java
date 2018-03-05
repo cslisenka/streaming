@@ -12,21 +12,19 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("Duplicates")
-public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
+public class SchemaHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(SchemaHandler.class);
 
     private static final String SYMBOL = "symbol";
+    private static final String SCHEMA = "schema";
     private static final String MAX_FREQUENCY = "maxFrequency";
     private static final String COMMAND = "command";
     private static final String SUBSCRIBE = "subscribe";
@@ -39,6 +37,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
 
     public static class SessionInfo {
         RateLimiter rm; // frequency limiter
+        Set<String> schema = new HashSet<>(); // If empty means sending full data
     }
 
     private IPricingClient client;
@@ -46,7 +45,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
-    public MaxFrequencyHandler(IPricingClient client) {
+    public SchemaHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }
@@ -55,17 +54,17 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
                 Map<String, String> data = new HashMap<>();
-                Set<WebSocketSession> sessions = new HashSet<>();
+                Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
                 synchronized (sub) {
                     data.putAll(sub.snapshot);
                     sub.sessions.forEach((s, info) -> {
                         if (info.rm.tryAcquire()) {
-                            sessions.add(s);
+                            sessions.put(s, info);
                         }
                     });
                 }
 
-                sessions.forEach(s -> send(s, symbol, data));
+                sessions.forEach((s, info) -> send(s, symbol, data, info.schema));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
@@ -82,7 +81,10 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
             double frequency = request.containsKey(MAX_FREQUENCY) ?
                     (double) request.get(MAX_FREQUENCY) : Double.MAX_VALUE;
 
-            subscribe(symbol, s, frequency);
+            String[] schema = request.containsKey(SCHEMA) ?
+                    request.get(SCHEMA).toString().split(",") : null;
+
+            subscribe(symbol, s, frequency, schema);
         }
 
         if (UNSUBSCRIBE.equals(command)) {
@@ -90,13 +92,16 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         }
     }
 
-    private void subscribe(String symbol, WebSocketSession s, double frequency) {
+    private void subscribe(String symbol, WebSocketSession s, double frequency, String[] schema) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
             info.rm = RateLimiter.create(frequency);
+            if (schema != null) {
+                info.schema.addAll(Arrays.asList(schema));
+            }
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 log.info("subscribing {}", symbol);
@@ -131,12 +136,26 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         }
     }
 
-    private void send(WebSocketSession s, String symbol, Map<String, String> data) {
+    private void send(WebSocketSession s, String symbol, Map<String, String> data, Set<String> schema) {
         try {
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
+
             // Beautifying JSON
             data.forEach((k, v) -> toSend.put(k.toLowerCase().replace("_", ""), v));
+
+            // Removing fields not defined in schema
+            if (schema != null) {
+                Set<String> notInSchema = new HashSet<>();
+                toSend.keySet().forEach(field -> {
+                    if (!schema.contains(field)) {
+                        notInSchema.add(field);
+                    }
+                });
+
+                notInSchema.forEach(field -> toSend.remove(field));
+            }
+
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
         } catch (IOException e) {
             log.error("Failed to send data", e);

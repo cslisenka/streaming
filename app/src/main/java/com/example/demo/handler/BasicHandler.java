@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("Duplicates")
 public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);

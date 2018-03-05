@@ -52,12 +52,14 @@
 
 <script>
     const jsonProtocol = {
-        url : '/ws/basic',
-        url : '/ws/maxFrequency',
+//        url : '/ws/basic',
+//        url : '/ws/maxFrequency',
+        url : '/ws/schema',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',
-                maxFrequency : frequency
+                maxFrequency : frequency,
+                schema : "symbol,seqnum,timestamp,bid,ask,bidsize,asksize" // missing last
             });
         },
         unsubscribe : (symbol) => { return JSON.stringify({
