@@ -7,6 +7,7 @@ import com.example.demo.protocol.JSONProtocol;
 import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -20,44 +21,51 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @SpringBootApplication
 public class DemoApplication implements WebSocketConfigurer {
 
+	@Autowired
+	private IPricingClient client;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-		StreamingHandler jsonHandler = new StreamingHandler(new JSONProtocol(), gen1());
-        r.addHandler(jsonHandler, "/streaming/json").setAllowedOrigins("*");
-
-		StreamingHandler positionHandler = new StreamingHandler(new PositionBasedProtocol(), gen2());
-		r.addHandler(positionHandler, "/streaming/position").setAllowedOrigins("*");
-
-		RateLimitHandler rlHandler = new RateLimitHandler(new JSONProtocol(), gen3());
-		rlHandler.start();
-		r.addHandler(rlHandler, "/streaming/ratelimit").setAllowedOrigins("*");
-
-		BandwidthAwareRateLimitHandler rlAckHandler = new BandwidthAwareRateLimitHandler(new JSONProtocol(), gen4());
-		rlAckHandler.start();
-		r.addHandler(rlAckHandler, "/streaming/bandwidth").setAllowedOrigins("*");
+        r.addHandler(streamingHandler(), "/streaming/json").setAllowedOrigins("*");
+		r.addHandler(positionHandler(), "/streaming/position").setAllowedOrigins("*");
+		r.addHandler(rateLimitHandler(), "/streaming/ratelimit").setAllowedOrigins("*");
+		r.addHandler(bandwidthAwareRateLimitHandler(), "/streaming/bandwidth").setAllowedOrigins("*");
     }
 
+	@Bean(initMethod = "start")
+    public BandwidthAwareRateLimitHandler bandwidthAwareRateLimitHandler() {
+		BandwidthAwareRateLimitHandler handler = new BandwidthAwareRateLimitHandler(new JSONProtocol(), client);
+		client.addListener(handler);
+		return handler;
+	}
+
+    @Bean(initMethod = "start")
+    public RateLimitHandler rateLimitHandler() {
+		RateLimitHandler handler = new RateLimitHandler(new JSONProtocol(), client);
+		client.addListener(handler);
+		return handler;
+	}
+
+    @Bean
+    public StreamingHandler positionHandler() {
+		StreamingHandler handler = new StreamingHandler(new PositionBasedProtocol(), client);
+		client.addListener(handler);
+		return handler;
+	}
+
+    @Bean
+    public StreamingHandler streamingHandler() {
+		StreamingHandler handler = new StreamingHandler(new JSONProtocol(), client);
+		client.addListener(handler);
+		return handler;
+	}
+
     @Bean(initMethod = "start", destroyMethod = "shutdown")
-    public IPricingClient gen1() {
-		return new RandomPriceGenerator(10);
-	}
-
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
-	public IPricingClient gen2() {
-		return new RandomPriceGenerator(10);
-	}
-
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
-	public IPricingClient gen3() {
-		return new RandomPriceGenerator(10);
-	}
-
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
-	public IPricingClient gen4() {
+    public IPricingClient client() {
 		return new RandomPriceGenerator(10);
 	}
 }

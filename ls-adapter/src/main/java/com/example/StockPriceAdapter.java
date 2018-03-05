@@ -24,7 +24,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
         logger = Logger.getLogger("LS_demos_Logger.StockQuotes");
         logger.info("Starting " + this.getClass().getName() + " adapter");
 
-        gen.setListener(this);
+        gen.addListener(this);
         gen.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

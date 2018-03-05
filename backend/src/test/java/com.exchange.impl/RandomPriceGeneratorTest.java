@@ -12,7 +12,7 @@ public class RandomPriceGeneratorTest {
 
     @Before
     public void setUp() {
-        gen.setListener((s, d) -> System.out.println(s + " " + d));
+        gen.addListener((s, d) -> System.out.println(s + " " + d));
         gen.start();
     }
 

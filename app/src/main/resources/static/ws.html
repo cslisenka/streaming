@@ -356,6 +356,7 @@
     }
 
     function update(date) {
+        console.log(date);
         for (let name in groups) {
             groups[name].path.attr('d', line);
         }
@@ -365,7 +366,7 @@
 
         // Slide x-axis left
         axis.transition()
-            //.duration(400)
+        //.duration(400)
             .ease('ease')
             .call(x.axis)
 
@@ -376,8 +377,6 @@
 
     const d3Listener = {
         onUpdate : (result) => {
-            console.log(result);
-
             let stockName = result.symbol,
                 value = result.ask,
                 date = new Date(+result.timestamp);
@@ -426,6 +425,7 @@
 
     ws.onmessage = (e) => {
         let result = config.proto.parse(e.data);
+//        console.log(e.data + '=' + result);
         tableListener.onUpdate(result);
         d3Listener.onUpdate(result);
     };

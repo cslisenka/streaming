@@ -95,8 +95,8 @@
     };
 
     const config = {
-//        host : 'localhost:8081',
-        host : 'localhost:9091',
+        host : 'localhost:8081',
+//        host : 'localhost:9091',
 //        proto : positionProtocol
         proto : jsonProtocol
     };
@@ -369,6 +369,8 @@
     }
 
     function update(date) {
+        console.log(date);
+
         for (let name in groups) {
             groups[name].path.attr('d', line);
         }

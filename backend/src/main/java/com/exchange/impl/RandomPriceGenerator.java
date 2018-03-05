@@ -7,13 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class RandomPriceGenerator implements IPricingClient {
 
@@ -23,7 +18,7 @@ public class RandomPriceGenerator implements IPricingClient {
     private final int delay;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final Map<String, Snapshot> subscriptions = new ConcurrentHashMap<>();
-    private IPricingListener listener;
+    private List<IPricingListener> listeners = new ArrayList<>();
 
     public RandomPriceGenerator(int delay) {
         this.delay = delay;
@@ -51,8 +46,8 @@ public class RandomPriceGenerator implements IPricingClient {
     }
 
     @Override
-    public void setListener(IPricingListener listener) {
-        this.listener = listener;
+    public void addListener(IPricingListener listener) {
+        listeners.add(listener);
     }
 
     @Override
@@ -60,7 +55,7 @@ public class RandomPriceGenerator implements IPricingClient {
         log.info("starting");
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
-            log.debug("subscriptions {}", subscriptions.size());
+            log.info("subscriptions {}", subscriptions.size());
             subscriptions.forEach((symbol, s) -> {
                 log.debug("generating for {}", symbol);
 
@@ -118,7 +113,15 @@ public class RandomPriceGenerator implements IPricingClient {
                 data.put("ASK_SIZE", s.askSize + "");
                 data.put("SEQ_NUM", s.seqNum + "");
                 data.put("TIMESTAMP", System.currentTimeMillis() + "");
-                listener.onData(symbol, data);
+
+                listeners.forEach(l -> {
+                    try {
+                        l.onData(symbol, data);
+                    } catch (Exception e) {
+                        log.error("Error in executor", e);
+                    }
+                });
+
             });
         }, 0, delay, TimeUnit.MILLISECONDS);
     }

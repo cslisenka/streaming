@@ -48,7 +48,6 @@ public class BandwidthAwareRateLimitHandler extends TextWebSocketHandler impleme
     public BandwidthAwareRateLimitHandler(IProtocol proto, IPricingClient client) {
         this.client = client;
         this.proto = proto;
-        client.setListener(this);
         log.info("created");
     }
 

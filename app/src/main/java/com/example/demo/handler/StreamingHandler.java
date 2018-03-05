@@ -27,8 +27,6 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
     public StreamingHandler(IProtocol proto, IPricingClient client) {
         this.client = client;
         this.proto = proto;
-        client.setListener(this);
-        client.start(); // TODO don't do it in constructor, please rewrite
         log.info("created");
     }
 
@@ -102,7 +100,9 @@ public class StreamingHandler extends TextWebSocketHandler implements IPricingLi
 
         Set<WebSocketSession> sessions = new HashSet<>();
         synchronized (subscriptions) {
-            sessions.addAll(subscriptions.get(symbol));
+            if (subscriptions.containsKey(symbol)) {
+                sessions.addAll(subscriptions.get(symbol));
+            }
         }
 
         sessions.forEach((s) -> {
