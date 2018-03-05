@@ -52,8 +52,7 @@
 
 <script>
     const jsonProtocol = {
-        url : '/streaming/ratelimit',
-//        url : '/streaming/json',
+        url : '/ws/basic',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',

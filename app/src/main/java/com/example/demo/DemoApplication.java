@@ -1,8 +1,8 @@
 package com.example.demo;
 
 import com.example.demo.handler.BandwidthAwareRateLimitHandler;
+import com.example.demo.handler.BasicHandler;
 import com.example.demo.handler.RateLimitHandler;
-import com.example.demo.handler.StreamingHandler;
 import com.example.demo.protocol.JSONProtocol;
 import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
@@ -30,8 +30,7 @@ public class DemoApplication implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-        r.addHandler(streamingHandler(), "/streaming/json").setAllowedOrigins("*");
-		r.addHandler(positionHandler(), "/streaming/position").setAllowedOrigins("*");
+	    r.addHandler(new BasicHandler(client), "/ws/basic").setAllowedOrigins("*");
 		r.addHandler(rateLimitHandler(), "/streaming/ratelimit").setAllowedOrigins("*");
 		r.addHandler(bandwidthAwareRateLimitHandler(), "/streaming/bandwidth").setAllowedOrigins("*");
     }
@@ -50,22 +49,8 @@ public class DemoApplication implements WebSocketConfigurer {
 		return handler;
 	}
 
-    @Bean
-    public StreamingHandler positionHandler() {
-		StreamingHandler handler = new StreamingHandler(new PositionBasedProtocol(), client);
-		client.addListener(handler);
-		return handler;
-	}
-
-    @Bean
-    public StreamingHandler streamingHandler() {
-		StreamingHandler handler = new StreamingHandler(new JSONProtocol(), client);
-		client.addListener(handler);
-		return handler;
-	}
-
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     public IPricingClient client() {
-		return new RandomPriceGenerator(10);
+		return new RandomPriceGenerator(500);
 	}
 }
