@@ -53,6 +53,7 @@
 <script>
     const jsonProtocol = {
         url : '/ws/basic',
+        url : '/ws/maxFrequency',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',
@@ -355,7 +356,7 @@
     }
 
     function update(date) {
-        console.log(date);
+//        console.log(date);
         for (let name in groups) {
             groups[name].path.attr('d', line);
         }

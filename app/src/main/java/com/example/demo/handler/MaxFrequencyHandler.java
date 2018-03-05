@@ -2,6 +2,7 @@ package com.example.demo.handler;
 
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,31 +17,56 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
+public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
 
     private static final String SYMBOL = "symbol";
+    private static final String MAX_FREQUENCY = "maxFrequency";
     private static final String COMMAND = "command";
     private static final String SUBSCRIBE = "subscribe";
     private static final String UNSUBSCRIBE = "unsubscribe";
 
     public static class SubscriptionInfo {
         Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
+        Map<String, String> snapshot = new HashMap<>();
     }
 
     public static class SessionInfo {
-        // Nothing to store now
+        RateLimiter rm; // frequency limiter
     }
 
     private IPricingClient client;
     private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
-    public BasicHandler(IPricingClient client) {
+    public MaxFrequencyHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
+    }
+
+    public void start() {
+        exec.scheduleAtFixedRate(() -> {
+            subscriptions.forEach((symbol, sub) -> {
+                Map<String, String> data = new HashMap<>();
+                Set<WebSocketSession> sessions = new HashSet<>();
+                synchronized (sub) {
+                    data.putAll(sub.snapshot);
+                    sub.sessions.forEach((s, info) -> {
+                        if (info.rm.tryAcquire()) {
+                            sessions.add(s);
+                        }
+                    });
+                }
+
+                sessions.forEach(s -> send(s, symbol, data));
+            });
+        }, 0, 10, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -52,7 +78,10 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
         String command = request.get(COMMAND).toString();
 
         if (SUBSCRIBE.equals(command)) {
-            subscribe(symbol, s);
+            double frequency = request.containsKey(MAX_FREQUENCY) ?
+                    (double) request.get(MAX_FREQUENCY) : Double.MAX_VALUE;
+
+            subscribe(symbol, s, frequency);
         }
 
         if (UNSUBSCRIBE.equals(command)) {
@@ -60,12 +89,14 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
         }
     }
 
-    private void subscribe(String symbol, WebSocketSession s) {
+    private void subscribe(String symbol, WebSocketSession s, double frequency) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
-            sub.sessions.put(s, new SessionInfo());
+            SessionInfo info = new SessionInfo();
+            info.rm = RateLimiter.create(frequency);
+            sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
@@ -93,14 +124,9 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         if (sub != null) {
-            Set<WebSocketSession> sessions = new HashSet<>();
             synchronized (sub) {
-                sessions.addAll(sub.sessions.keySet());
+                sub.snapshot.putAll(data);
             }
-
-            sessions.forEach((s) -> {
-                send(s, symbol, data);
-            });
         }
     }
 
@@ -130,5 +156,9 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     @Override
     public void handleTransportError(WebSocketSession s, Throwable e) throws Exception {
         log.error("WS error (" + s.getId() + ")", e);
+    }
+
+    public void shutdown() {
+        exec.shutdownNow();
     }
 }

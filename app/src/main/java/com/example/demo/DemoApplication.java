@@ -2,9 +2,8 @@ package com.example.demo;
 
 import com.example.demo.handler.BandwidthAwareRateLimitHandler;
 import com.example.demo.handler.BasicHandler;
-import com.example.demo.handler.RateLimitHandler;
+import com.example.demo.handler.MaxFrequencyHandler;
 import com.example.demo.protocol.JSONProtocol;
-import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +23,9 @@ public class DemoApplication implements WebSocketConfigurer {
 	@Autowired
 	private IPricingClient client;
 
+    @Autowired
+    private MaxFrequencyHandler maxFrequencyHandler;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
@@ -31,7 +33,7 @@ public class DemoApplication implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
 	    r.addHandler(new BasicHandler(client), "/ws/basic").setAllowedOrigins("*");
-		r.addHandler(rateLimitHandler(), "/streaming/ratelimit").setAllowedOrigins("*");
+		r.addHandler(maxFrequencyHandler, "/ws/maxFrequency").setAllowedOrigins("*");
 		r.addHandler(bandwidthAwareRateLimitHandler(), "/streaming/bandwidth").setAllowedOrigins("*");
     }
 
@@ -42,15 +44,13 @@ public class DemoApplication implements WebSocketConfigurer {
 		return handler;
 	}
 
-    @Bean(initMethod = "start")
-    public RateLimitHandler rateLimitHandler() {
-		RateLimitHandler handler = new RateLimitHandler(new JSONProtocol(), client);
-		client.addListener(handler);
-		return handler;
-	}
+	@Bean(initMethod = "start", destroyMethod = "shutdown")
+	public MaxFrequencyHandler maxFrequencyHandler(@Autowired IPricingClient client) {
+        return new MaxFrequencyHandler(client);
+    }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     public IPricingClient client() {
-		return new RandomPriceGenerator(500);
+		return new RandomPriceGenerator(10);
 	}
 }
