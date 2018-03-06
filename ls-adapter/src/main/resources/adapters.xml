@@ -42,6 +42,9 @@
         <param name="item_family_8">STOCK.*</param>
         <param name="modes_for_item_family_8">MERGE</param>
 
+        <param name="item_family_9">PF*</param>
+        <param name="modes_for_item_family_9">COMMAND</param>
+
         <!-- size of the room and max number of players in the Room-Ball Demo -->
         <param name="world_size_x">478</param>
         <param name="world_size_y">200</param>
@@ -77,5 +80,10 @@
     <data_provider name="STOCK">
         <install_dir>stock</install_dir>
         <adapter_class>com.example.StockPriceAdapter</adapter_class>
+    </data_provider>
+
+    <data_provider name="PORTFOLIO">
+        <install_dir>portfolio</install_dir>
+        <adapter_class>com.example.PortfolioAdapter</adapter_class>
     </data_provider>
 </adapters_conf>

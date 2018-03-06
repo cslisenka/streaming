@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+
+    <title>My stock portfolio (Command pattern)</title>
+</head>
+<body>
+<style>
+    * {font-size: 16px;}
+
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    .graph .axis {
+        stroke-width: 1;
+    }
+
+    .graph .axis .tick line {
+        stroke: black;
+    }
+
+    .graph .axis .tick text {
+        fill: black;
+        font-size: 0.7em;
+    }
+
+    .graph .axis .domain {
+        fill: none;
+        stroke: black;
+    }
+
+    .graph .group {
+        fill: none;
+        stroke: black;
+        stroke-width: 1.5;
+    }
+
+    .updated {
+        animation: colorchange 1s;
+        -webkit-animation: colorchange 1s;
+    }
+
+    @-webkit-keyframes colorchange {
+        0% {background: #ffffff;}
+        50% {background: #c2f2f2;}
+        100% {background: #ffffff;}
+    }
+</style>
+<script src="js/d3.v3.min.js"></script>
+<script src="js/lodash.js"></script>
+<!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
+<script src="js/lightstreamer.js"></script>
+<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+<script src="js/popper.min.js" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+<script>
+    const config = {
+        lsURL : 'http://localhost:8080',
+        initialMaxBandwidth : 200,
+        initialMaxFrequency : 100
+    };
+
+    let myClient = new LightstreamerClient(config.lsURL, "WELCOME");
+
+    myClient.addListener({
+        onListenStart: (lsClient) => { console.log(`ON LISTEN START ${lsClient}`); },
+        onStatusChange: (newStatus) => {
+            console.log(`CONNECTION STATUS:  ${newStatus}`);
+            $('#connectionStatusValue').html(newStatus);
+        },
+        onServerError: (i, errorMessage) => {
+            console.error(`ERROR ${i} ${errorMessage}`);
+        },
+        onPropertyChange: function(property) {
+            let value = '?';
+            switch (property) {
+                case 'maxBandwidth':
+                    value = myClient.connectionOptions.getMaxBandwidth();
+                    break;
+                case 'sessionId':
+                    value = myClient.connectionOptions.getSessionId();
+                    break;
+                case 'serverSocketName':
+                    value = myClient.connectionOptions.getServerSocketName();
+                    break;
+                case 'serverInstanceAddress':
+                    value = myClient.connectionOptions.getServerInstanceAddress();
+                    break;
+                case 'keepaliveInterval':
+                    value = myClient.connectionOptions.getKeepaliveInterval();
+                    break;
+            }
+
+            console.log(`ON LISTEN END ${property}=${value}`);
+        },
+        onListenEnd: (lsClient) => { console.log(`ON LISTEN END ${lsClient}`); },
+        onShareAbort: () => { console.log('Share Abort'); }
+    });
+
+    myClient.connect();
+
+//    const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
+//    const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
+
+    let tableListener = {
+        onItemUpdate: (updateInfo) => {
+            let stockName = updateInfo.getItemName();
+            let updates = [];
+
+            updateInfo.forEachChangedField((fieldName, fieldPos, value) => {
+                updates.push(`${fieldName}=${value}`);
+            });
+
+            console.log(`onItemUpdate: ${stockName} ${updates} snapshot=${updateInfo.isSnapshot()}`);
+        },
+        onSubscriptionError: (code, message) => {
+            console.log('Error : ' + code + ' ' + message);
+        },
+        onEndOfSnapshot: (itemName, itemPos) => {
+            console.log(`onEndOfSnapshot(${itemName}, ${itemPos})`);
+        },
+        onClearSnapshot : (itemName, itemPos) => {
+            console.log(`onClearSnapshot(${itemName}, ${itemPos})`);
+        },
+        onItemLostUpdates: (itemName, itemPos, lostUpdates) => {
+            console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
+        }
+    };
+</script>
+
+<br>
+
+<div class="container">
+    <div class="row">
+        <div class="alert alert-dark" style="width: 350px;" role="alert">
+            <b>Status: <span id="connectionStatusValue">?</span></b><br>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">SYMBOL</th>
+                    <th scope="col">SEQ NUM</th>
+                    <th style="width: 100px" scope="col">BID</th>
+                    <th scope="col">BID SIZE</th>
+                    <th style="width: 100px" scope="col">ASK</th>
+                    <th scope="col">ASK SIZE</th>
+                    <th style="width: 100px" scope="col">LAST</th>
+                    <th scope="col">TIMESTAMP</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr id="STOCK_AAPL">
+                    <th>AAPL</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td id="123">-</td>
+                    <td>-</td>
+                </tr>
+                <tr id="STOCK_IBM">
+                    <th>IBM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                <tr id="STOCK_EPAM">
+                    <th>EPAM</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                <tr id="STOCK_TSLA">
+                    <th>TSLA</th>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="table-warning">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!--button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                Buy/sell stocks
+            </button-->
+        </div>
+    </div>
+</div>
+
+<script>
+    let sub = new Subscription('COMMAND', "PF", ["key", "command", "value"]);
+    sub.setDataAdapter('PORTFOLIO');
+    sub.setRequestedSnapshot("yes");
+    sub.setRequestedMaxFrequency(config.initialMaxFrequency);
+    sub.addListener(tableListener);
+    myClient.subscribe(sub)
+</script>
+</body>
+</html>
