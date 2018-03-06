@@ -57,12 +57,14 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                 Map<String, String> data = new HashMap<>();
                 Set<WebSocketSession> sessions = new HashSet<>();
                 synchronized (sub) {
-                    data.putAll(sub.snapshot);
-                    sub.sessions.forEach((s, info) -> {
-                        if (info.rm.tryAcquire()) {
-                            sessions.add(s);
-                        }
-                    });
+                    if (!sub.snapshot.isEmpty()) {
+                        data.putAll(sub.snapshot);
+                        sub.sessions.forEach((s, info) -> {
+                            if (info.rm.tryAcquire()) {
+                                sessions.add(s);
+                            }
+                        });
+                    }
                 }
 
                 sessions.forEach(s -> send(s, symbol, data));

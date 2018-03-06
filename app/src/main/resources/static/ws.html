@@ -53,13 +53,13 @@
 <script>
     const jsonProtocol = {
 //        url : '/ws/basic',
-//        url : '/ws/maxFrequency',
-        url : '/ws/schema',
+        url : '/ws/maxFrequency',
+//        url : '/ws/schema',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',
                 maxFrequency : frequency,
-                schema : "symbol,seqnum,timestamp,bid,ask,bidsize,asksize" // missing last
+                schema : "symbol,seqnum,timestamp,bid,ask" // missing last,bidsize,asksize
             });
         },
         unsubscribe : (symbol) => { return JSON.stringify({
@@ -333,7 +333,7 @@
     const line = d3.svg.line()
         .x((d) => {
             let xValue = x(d.time);
-            return xValue > width ? width : xValue|| 0;
+            return xValue > width ? width : xValue > 0 ? xValue : 0;
         })
         .y((d) => y(d.value));
 
@@ -383,21 +383,26 @@
                 value = result.ask,
                 date = new Date(+result.timestamp);
 
-            for (let name in groups) {
-                // Add new values
-                let group = groups[name],
-                    lastItem = group.data[group.data.length - 1],
-                    updated = stockName === name ? {time: date, value: value}: lastItem;
+            // Validating data
+            if (result.ask && result.timestamp) {
+                for (let name in groups) {
+                    // Add new values
+                    let group = groups[name],
+                        lastItem = group.data[group.data.length - 1],
+                        updated = stockName === name ? {time: date, value: value} : lastItem;
 
-                if (lastItem.time === startTime){
-                    lastItem.time = date;
+                    if (lastItem.time === startTime) {
+                        lastItem.time = date;
+                    }
+
+                    group.data.push(updated);
+                    groups[name].data.shift();
                 }
 
-                group.data.push(updated);
-                groups[name].data.shift();
+                throttledUpdate(date);
+            } else {
+                console.error(`there are no ask (${result.ask}) or timestamp (${result.timestamp}). symbol ${result.symbol} `)
             }
-
-            throttledUpdate(date);
         }
     };
 </script>

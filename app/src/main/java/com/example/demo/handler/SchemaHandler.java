@@ -56,12 +56,14 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                 Map<String, String> data = new HashMap<>();
                 Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
                 synchronized (sub) {
-                    data.putAll(sub.snapshot);
-                    sub.sessions.forEach((s, info) -> {
-                        if (info.rm.tryAcquire()) {
-                            sessions.put(s, info);
-                        }
-                    });
+                    if (!sub.snapshot.isEmpty()) {
+                        data.putAll(sub.snapshot);
+                        sub.sessions.forEach((s, info) -> {
+                            if (info.rm.tryAcquire()) {
+                                sessions.put(s, info);
+                            }
+                        });
+                    }
                 }
 
                 sessions.forEach((s, info) -> send(s, symbol, data, info.schema));

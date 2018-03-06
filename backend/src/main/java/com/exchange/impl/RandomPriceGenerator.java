@@ -55,7 +55,7 @@ public class RandomPriceGenerator implements IPricingClient {
         log.info("starting");
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
-            log.info("subscriptions {}", subscriptions.size());
+            log.debug("subscriptions {}", subscriptions.size());
             subscriptions.forEach((symbol, s) -> {
                 log.debug("generating for {}", symbol);
 
