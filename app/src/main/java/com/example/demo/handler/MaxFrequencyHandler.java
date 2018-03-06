@@ -6,11 +6,15 @@ import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("Duplicates")
+@Component
 public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
@@ -46,11 +51,13 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
+    @Autowired
     public MaxFrequencyHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }
 
+    @PostConstruct
     public void start() {
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
@@ -163,6 +170,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         log.error("WS error (" + s.getId() + ")", e);
     }
 
+    @PreDestroy
     public void shutdown() {
         exec.shutdownNow();
     }

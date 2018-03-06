@@ -5,6 +5,8 @@ import com.exchange.IPricingListener;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -18,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("Duplicates")
+@Component
 public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
@@ -39,6 +42,7 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
+    @Autowired
     public BasicHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);

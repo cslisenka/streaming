@@ -54,62 +54,81 @@
     const jsonProtocol = {
 //        url : '/ws/basic',
 //        url : '/ws/maxFrequency',
-//        url : '/ws/schema',
-        url : '/ws/snapshotUpdate',
-        subscribe : (symbol, frequency) => { return JSON.stringify({
-                symbol : symbol,
-                command : 'subscribe',
-                maxFrequency : frequency,
-                schema : "symbol,seqnum,timestamp,bid,ask,last" // missing bidsize,asksize
-            });
+        url : '/ws/schema',
+//        url : '/ws/snapshotUpdate',
+        subscribe : (sub) => {
+            return JSON.stringify(sub);
         },
-        unsubscribe : (symbol) => { return JSON.stringify({
-                symbol : symbol,
-                command : 'unsubscribe'
-            });
-        },
-        parse : (string) => { return JSON.parse(string); }
+        parse : (sub, response) => {
+            return JSON.parse(response);
+        }
     };
 
     const positionProtocol = {
-        url : '/streaming/position',
-        subscribe : (symbol, frequency) => `S|${symbol}|${frequency}`,
-        unsubscribe : (symbol) => `U|${symbol}`,
-        parse : (string) => {
-            let t = string.split("|");
-            return {
-                symbol    : t[0],
-                seqnum    : t[1],
-                timestamp : t[2],
-                bid       : t[3],
-                ask       : t[4],
-                bidsize   : t[5],
-                asksize   : t[6],
-                last      : t[7]
-            };
+        url : '/ws/position',
+        subscribe : (sub) => {
+            // Schema is mandatory for position-based protocol
+            let msg = `S|${sub.symbol}|${sub.schema}`;
+            if (sub.maxFrequency) {
+                msg += `|${sub.maxFrequency}`;
+            }
+            return msg;
+        },
+        parse : (sub, response) => {
+            let t = response.split("|");
+            let result = {};
+            let i = 0;
+            for (k in sub.schema) {
+                if (t[i]) {
+                    result[sub.schema[k]] = t[i];
+                }
+                i++;
+            }
+            return result;
         }
     };
 
     const config = {
 //        host : 'localhost:8081',
         host : 'localhost:9091',
-//        proto : positionProtocol
-        proto : jsonProtocol
+        proto : positionProtocol
+//        proto : jsonProtocol
     };
 
 
     var ws = new WebSocket(`ws://${config.host}${config.proto.url}`);
 
-    const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
-    const fields = ['SEQ_NUM', 'BID', 'BID_SIZE', 'ASK', 'ASK_SIZE', 'LAST', 'TIMESTAMP'];
+    var subscriptions = {};
+    subscriptions['STOCK_AAPL'] = {
+        symbol : 'STOCK_AAPL',
+        command : 'subscribe',
+        maxFrequency : 1,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
+    subscriptions['STOCK_IBM'] = {
+        symbol : 'STOCK_IBM',
+        command : 'subscribe',
+        maxFrequency : 10,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
+    subscriptions['STOCK_EPAM'] = {
+        symbol : 'STOCK_EPAM',
+        command : 'subscribe',
+        maxFrequency : 50,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
+    subscriptions['STOCK_TSLA'] = {
+        symbol : 'STOCK_TSLA',
+        command : 'subscribe',
+        maxFrequency : 100,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
 
     ws.onopen = (e) => {
         console.log(`onopen ${e}`);
-
-        ws.send(config.proto.subscribe('STOCK_AAPL', 1));
-        ws.send(config.proto.subscribe('STOCK_IBM', 2));
-        ws.send(config.proto.subscribe('STOCK_EPAM', 5));
-        ws.send(config.proto.subscribe('STOCK_TSLA', 10));
+        for (k in subscriptions) {
+            ws.send(config.proto.subscribe(subscriptions[k]));
+        }
     };
 
     ws.onclose = (e) => { console.log(`onclose ${e}`); };
@@ -408,7 +427,8 @@
     }
 
     ws.onmessage = (e) => {
-        let result = config.proto.parse(e.data);
+        let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
+        let result = config.proto.parse(sub, e.data);
 
         // For checking snapshot-update delivery
 //        if (!result.last) {

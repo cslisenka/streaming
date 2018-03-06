@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class SchemaHandler extends TextWebSocketHandler implements IPricingListener {
+public class PositionProtocolHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(SchemaHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(PositionProtocolHandler.class);
 
     private static final String SYMBOL = "symbol";
     private static final String SCHEMA = "schema";
@@ -42,16 +42,16 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
 
     public static class SessionInfo {
         RateLimiter rm; // frequency limiter
-        List<String> schema = new ArrayList<>(); // If empty means sending full data
+        List<String> schema; // If empty means sending full data
+        Map<String, String> dataSent = new HashMap<>();
     }
 
     private IPricingClient client;
-    private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
-    public SchemaHandler(IPricingClient client) {
+    public PositionProtocolHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }
@@ -82,16 +82,26 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
         log.info("Received ({}) {}", s.getId(), m.getPayload());
 
-        Map<String, Object> request = gson.fromJson(m.getPayload(), HashMap.class);
-        String symbol = request.get(SYMBOL).toString();
-        String command = request.get(COMMAND).toString();
+        // S - subscribe, U - unsubscribe | symbol | max frequency | schema
+        // S|AAPL|1.5|bid,ask,bidsize,asksize
+        String[] message = m.getPayload().split("\\|");
+        String symbol = message[1];
+        String command = "";;
+        switch (message[0]) {
+            case "S" :
+                command = "subscribe";
+            break;
+            case "U" :
+                command = "unsubscribe";
+            break;
+        }
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = request.containsKey(MAX_FREQUENCY) ?
-                    (double) request.get(MAX_FREQUENCY) : Double.MAX_VALUE;
+            double frequency = message.length > 3 ?
+                    Double.parseDouble(message[3]) : Double.MAX_VALUE;
 
-            List<String> schema = request.containsKey(SCHEMA) ?
-                    (List<String>) request.get(SCHEMA) : new ArrayList<>();
+            List<String> schema = message.length > 2 ?
+                   Arrays.asList(message[2].split(",")) : new ArrayList<>();
 
             subscribe(symbol, s, frequency, schema);
         }
@@ -148,17 +158,32 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
 
-            data.forEach((k, v) -> {
-                // Beautifying JSON
-                String key = k.toLowerCase().replace("_", "");
+            synchronized (info.dataSent) {
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    String key = k.toLowerCase().replace("_", "");
 
-                boolean inSchema = info.schema == null || info.schema.contains(key);
-                if (inSchema) {
-                    toSend.put(key, v);
-                }
+                    boolean inSchema = info.schema == null || info.schema.contains(key);
+                    boolean notSent = !v.equals(info.dataSent.get(key));
+
+                    if (inSchema && notSent) {
+                        toSend.put(key, v);
+                    }
+                });
+
+                info.dataSent.putAll(toSend);
+            }
+
+            // Building message using position-based protocol
+            StringBuilder result = new StringBuilder();
+            // Absence of schema is not supported for position-based protocol
+            info.schema.forEach(field -> {
+                String value = toSend.get(field) != null ? toSend.get(field) : "";
+                result.append(value).append("|");
             });
 
-            s.sendMessage(new TextMessage(gson.toJson(toSend)));
+            log.info("{} {}", symbol, result.toString());
+            s.sendMessage(new TextMessage(result.toString()));
         } catch (IOException e) {
             log.error("Failed to send data", e);
         }

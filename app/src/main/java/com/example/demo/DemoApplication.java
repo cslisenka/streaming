@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.handler.*;
 import com.example.demo.protocol.JSONProtocol;
+import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class DemoApplication implements WebSocketConfigurer {
     @Autowired
     private SnapshotUpdateHandler snapshotUpdateHandler;
 
+    @Autowired
+    private PositionProtocolHandler positionProtocolHandler;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
@@ -40,29 +44,9 @@ public class DemoApplication implements WebSocketConfigurer {
 		r.addHandler(maxFrequencyHandler, "/ws/maxFrequency").setAllowedOrigins("*");
         r.addHandler(schemaHandler, "/ws/schema").setAllowedOrigins("*");
         r.addHandler(snapshotUpdateHandler, "/ws/snapshotUpdate").setAllowedOrigins("*");
-		r.addHandler(bandwidthAwareRateLimitHandler(), "/streaming/bandwidth").setAllowedOrigins("*");
-    }
-
-	@Bean(initMethod = "start")
-    public BandwidthAwareRateLimitHandler bandwidthAwareRateLimitHandler() {
-		BandwidthAwareRateLimitHandler handler = new BandwidthAwareRateLimitHandler(new JSONProtocol(), client);
-		client.addListener(handler);
-		return handler;
-	}
-
-    @Bean(initMethod = "start")
-    public SnapshotUpdateHandler snapshotUpdateHandler(@Autowired IPricingClient client) {
-        return new SnapshotUpdateHandler(client);
-    }
-
-    @Bean(initMethod = "start", destroyMethod = "shutdown")
-    public SchemaHandler schemaHandler(@Autowired IPricingClient client) {
-        return new SchemaHandler(client);
-    }
-
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
-	public MaxFrequencyHandler maxFrequencyHandler(@Autowired IPricingClient client) {
-        return new MaxFrequencyHandler(client);
+        r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
+        // TODO bandwidthControl
+//		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
     }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
