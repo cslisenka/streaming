@@ -53,8 +53,8 @@
 <script>
     const jsonProtocol = {
 //        url : '/ws/basic',
-        url : '/ws/maxFrequency',
-//        url : '/ws/schema',
+//        url : '/ws/maxFrequency',
+        url : '/ws/schema',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',

@@ -66,7 +66,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                     }
                 }
 
-                sessions.forEach((s, info) -> send(s, symbol, data, info.schema));
+                sessions.forEach((s, info) -> send(s, symbol, data, info));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
@@ -138,25 +138,20 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
         }
     }
 
-    private void send(WebSocketSession s, String symbol, Map<String, String> data, Set<String> schema) {
+    private void send(WebSocketSession s, String symbol, Map<String, String> data, SessionInfo info) {
         try {
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
 
-            // Beautifying JSON
-            data.forEach((k, v) -> toSend.put(k.toLowerCase().replace("_", ""), v));
+            data.forEach((k, v) -> {
+                // Beautifying JSON
+                String key = k.toLowerCase().replace("_", "");
 
-            // Removing fields not defined in schema
-            if (schema != null) {
-                Set<String> notInSchema = new HashSet<>();
-                toSend.keySet().forEach(field -> {
-                    if (!schema.contains(field)) {
-                        notInSchema.add(field);
-                    }
-                });
-
-                notInSchema.forEach(field -> toSend.remove(field));
-            }
+                // Sending only fields which are in schema
+                if (info.schema == null || info.schema.contains(key)) {
+                    toSend.put(key, v);
+                }
+            });
 
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
         } catch (IOException e) {

@@ -137,8 +137,10 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         try {
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
-            // Beautifying JSON
-            data.forEach((k, v) -> toSend.put(k.toLowerCase().replace("_", ""), v));
+            data.forEach((k, v) -> {
+                // Beautifying JSON
+                toSend.put(k.toLowerCase().replace("_", ""), v);
+            });
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
         } catch (IOException e) {
             log.error("Failed to send data", e);
