@@ -19,9 +19,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("Duplicates")
-public class SchemaHandler extends TextWebSocketHandler implements IPricingListener {
+public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(SchemaHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(SnapshotUpdateHandler.class);
 
     private static final String SYMBOL = "symbol";
     private static final String SCHEMA = "schema";
@@ -38,6 +38,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     public static class SessionInfo {
         RateLimiter rm; // frequency limiter
         Set<String> schema = new HashSet<>(); // If empty means sending full data
+        Map<String, String> dataSent = new HashMap<>();
     }
 
     private IPricingClient client;
@@ -45,7 +46,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
-    public SchemaHandler(IPricingClient client) {
+    public SnapshotUpdateHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }
@@ -143,15 +144,21 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
 
-            data.forEach((k, v) -> {
-                // Beautifying JSON
-                String key = k.toLowerCase().replace("_", "");
+            synchronized (info.dataSent) {
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    String key = k.toLowerCase().replace("_", "");
 
-                boolean inSchema = info.schema == null || info.schema.contains(key);
-                if (inSchema) {
-                    toSend.put(key, v);
-                }
-            });
+                    boolean inSchema = info.schema == null || info.schema.contains(key);
+                    boolean notSent = !v.equals(info.dataSent.get(key));
+
+                    if (inSchema && notSent) {
+                        toSend.put(key, v);
+                    }
+                });
+
+                info.dataSent.putAll(toSend);
+            }
 
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
         } catch (IOException e) {

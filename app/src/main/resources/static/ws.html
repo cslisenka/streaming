@@ -54,12 +54,13 @@
     const jsonProtocol = {
 //        url : '/ws/basic',
 //        url : '/ws/maxFrequency',
-        url : '/ws/schema',
+//        url : '/ws/schema',
+        url : '/ws/snapshotUpdate',
         subscribe : (symbol, frequency) => { return JSON.stringify({
                 symbol : symbol,
                 command : 'subscribe',
                 maxFrequency : frequency,
-                schema : "symbol,seqnum,timestamp,bid,ask" // missing last,bidsize,asksize
+                schema : "symbol,seqnum,timestamp,bid,ask,last" // missing bidsize,asksize
             });
         },
         unsubscribe : (symbol) => { return JSON.stringify({
@@ -124,7 +125,6 @@
             let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
             cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
             stockSeqNums[stockName] = +result.seqnum;
-
             cells[2].innerHTML = result.bid;
             cells[3].innerHTML = result.bidsize;
             cells[4].innerHTML = result.ask;
@@ -155,19 +155,6 @@
             <div class="alert alert-dark" style="width: 250px;" role="alert">
                 <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
                 <input id="bandwidth" type="range" min="1" max="200" step="1">
-
-                <script>
-                    // Init bandwidth slider and label
-//                    $('#bandwidthValue').html(config.initialMaxBandwidth);
-//                    $('#bandwidth').val(config.initialMaxBandwidth);
-//                    $('#bandwidth').change((e) => {
-//                        let value = +e.target.value;
-//                        if (value > 0) {
-//                            $('#bandwidthValue').html(value);
-//                            myClient.connectionOptions.setMaxBandwidth(value);
-//                        }
-//                    });
-                </script>
             </div>
             <span class="badge badge-primary">AAPL</span><br>
             <span class="badge badge-danger">IBM</span><br>
@@ -358,7 +345,6 @@
     }
 
     function update(date) {
-//        console.log(date);
         for (let name in groups) {
             groups[name].path.attr('d', line);
         }
@@ -368,7 +354,6 @@
 
         // Slide x-axis left
         axis.transition()
-        //.duration(400)
             .ease('ease')
             .call(x.axis)
 
@@ -408,31 +393,29 @@
 </script>
 
 <script>
-    // Prepare subscriptions and sliders
-//    const subscriptions = stocks.map(function(s) {
-//        let sub = new Subscription('MERGE', s, fields);
-//        sub.setDataAdapter('STOCK');
-//        sub.addListener(tableListener);
-//        sub.addListener(d3Listener);
-//        sub.setRequestedMaxFrequency(config.initialMaxFrequency);
-//
-//        document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
-//        document.getElementById('sl' + s).value = config.initialMaxFrequency;
-//
-//        $('#sl' + s).change((e) => {
-//            let value = +e.target.value;
-//            if (value >= 0) {
-//                document.getElementById('fr' + s).innerHTML = '' + value;
-//                sub.setRequestedMaxFrequency(value);
-//            }
-//        });
-//
-//        return sub;
-//    });
+    var snapshots = [];
+    function updateSnapshot(data) {
+        // Storing snapshot
+        if (!snapshots[data.symbol]) {
+            snapshots[data.symbol] = {};
+        }
+
+        for (var k in data) {
+            snapshots[data.symbol][k] = data[k];
+        }
+
+        return snapshots[data.symbol];
+    }
 
     ws.onmessage = (e) => {
         let result = config.proto.parse(e.data);
-//        console.log(e.data + '=' + result);
+
+        // For checking snapshot-update delivery
+//        if (!result.last) {
+//            console.log(result);
+//        }
+
+        result = updateSnapshot(result);
         tableListener.onUpdate(result);
         d3Listener.onUpdate(result);
     };

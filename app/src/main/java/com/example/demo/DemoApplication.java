@@ -1,13 +1,9 @@
 package com.example.demo;
 
-import com.example.demo.handler.BandwidthAwareRateLimitHandler;
-import com.example.demo.handler.BasicHandler;
-import com.example.demo.handler.MaxFrequencyHandler;
-import com.example.demo.handler.SchemaHandler;
+import com.example.demo.handler.*;
 import com.example.demo.protocol.JSONProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
-import com.sun.org.apache.xerces.internal.impl.xs.SchemaNamespaceSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -31,6 +27,9 @@ public class DemoApplication implements WebSocketConfigurer {
     @Autowired
     private SchemaHandler schemaHandler;
 
+    @Autowired
+    private SnapshotUpdateHandler snapshotUpdateHandler;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
@@ -40,6 +39,7 @@ public class DemoApplication implements WebSocketConfigurer {
 	    r.addHandler(new BasicHandler(client), "/ws/basic").setAllowedOrigins("*");
 		r.addHandler(maxFrequencyHandler, "/ws/maxFrequency").setAllowedOrigins("*");
         r.addHandler(schemaHandler, "/ws/schema").setAllowedOrigins("*");
+        r.addHandler(snapshotUpdateHandler, "/ws/snapshotUpdate").setAllowedOrigins("*");
 		r.addHandler(bandwidthAwareRateLimitHandler(), "/streaming/bandwidth").setAllowedOrigins("*");
     }
 
@@ -49,6 +49,11 @@ public class DemoApplication implements WebSocketConfigurer {
 		client.addListener(handler);
 		return handler;
 	}
+
+    @Bean(initMethod = "start")
+    public SnapshotUpdateHandler snapshotUpdateHandler(@Autowired IPricingClient client) {
+        return new SnapshotUpdateHandler(client);
+    }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     public SchemaHandler schemaHandler(@Autowired IPricingClient client) {
