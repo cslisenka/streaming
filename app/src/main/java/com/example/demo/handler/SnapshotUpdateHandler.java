@@ -166,7 +166,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
             }
 
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to send data", e);
         }
     }

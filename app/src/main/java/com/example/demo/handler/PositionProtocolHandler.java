@@ -184,7 +184,7 @@ public class PositionProtocolHandler extends TextWebSocketHandler implements IPr
 
             log.info("{} {}", symbol, result.toString());
             s.sendMessage(new TextMessage(result.toString()));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to send data", e);
         }
     }

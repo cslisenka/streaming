@@ -116,7 +116,7 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
             // Beautifying JSON
             data.forEach((k, v) -> toSend.put(k.toLowerCase().replace("_", ""), v));
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to send data", e);
         }
     }

@@ -158,8 +158,9 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                 }
             });
 
+            log.info("{} {}", symbol, toSend);
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to send data", e);
         }
     }

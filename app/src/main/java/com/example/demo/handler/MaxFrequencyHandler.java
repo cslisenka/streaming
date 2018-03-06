@@ -149,7 +149,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                 toSend.put(k.toLowerCase().replace("_", ""), v);
             });
             s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to send data", e);
         }
     }
