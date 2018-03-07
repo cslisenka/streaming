@@ -78,8 +78,6 @@
         },
         onServerError: (i, errorMessage) => {
             console.error(`ERROR ${i} ${errorMessage}`);
-            let prevErrors = $('#errors').html();
-            $('#errors').html(prevErrors + "<br>" + errorMessage);
         },
         onPropertyChange: function(property) {
             let value = '?';
@@ -130,7 +128,6 @@
                         case 'TIMESTAMP':
                             let timestamp = new Date(+value);
                             let diff = new Date().getTime() - timestamp;
-
                             cell.innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br>  (${diff} ms)`;
                             break;
                         case 'SEQ_NUM':
@@ -148,13 +145,13 @@
                 }
             });
         },
-        onSubscriptionError: function(code, message) {
+        onSubscriptionError: (code, message) => {
             console.log('Error : ' + code + ' ' + message);
         },
-        onEndOfSnapshot: function (itemName, itemPos) {
+        onEndOfSnapshot: (itemName, itemPos) => {
             console.log('onEndOfSnapshot ' + itemName);
         },
-        onItemLostUpdates: function(itemName, itemPos, lostUpdates){
+        onItemLostUpdates: (itemName, itemPos, lostUpdates) => {
             console.log('onItemLostUpdates ' + itemName + ' ' + itemPos + ' ' + lostUpdates);
         }
     };
@@ -304,61 +301,13 @@
                 </tr>
                 </tbody>
             </table>
-
-            <!--button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-                Buy/sell stocks
-            </button-->
         </div>
-        <div class="col-12">
-            <h2>Errors</h2>
-            <div id="errors"></div>
-        </div>
-
-        <!--div class="col-4">
-            <h2>Important notifications</h2>
-            <div class="alert alert-warning" role="alert">
-                Buy 1000 AAPL shares - order sent
-            </div>
-            <div class="alert alert-success" role="alert">
-                Buy 100 AAPL shares - success
-            </div>
-            <div class="alert alert-warning" role="alert">
-                Sell 100 AAPL shares - order sent
-            </div>
-            <div class="alert alert-success" role="alert">
-                Sell 100 AAPL shares - success
-            </div>
-            <div class="alert alert-warning" role="alert">
-                Sell 1000 AAPL shares - order sent
-            </div>
-            <div class="alert alert-danger" role="alert">
-                Error - not enough stocks
-            </div>
-            <div class="alert alert-warning" role="alert">
-                Buy 1000 AAPL shares - order sent
-            </div>
-            <div class="alert alert-success" role="alert">
-                Buy 100 AAPL shares - success
-            </div>
-            <div class="alert alert-warning" role="alert">
-                Sell 100 AAPL shares - order sent
-            </div>
-            <div class="alert alert-success" role="alert">
-                Sell 100 AAPL shares - success
-            </div>
-            <div class="alert alert-warning" role="alert">
-                Sell 1000 AAPL shares - order sent
-            </div>
-            <div class="alert alert-danger" role="alert">
-                Error - not enough stocks
-            </div>
-        </div-->
     </div>
 </div>
 
 <script>
     const limit = 3200,  // points at the chart for a line
-        interval = 20 * 1000, //
+        interval = 20 * 1000,
         now = Date.now(),
         startTime = new Date(now - interval);
 
@@ -469,7 +418,7 @@
 
 <script>
     // Prepare subscriptions and sliders
-    const subscriptions = stocks.map(function(s) {
+    const subscriptions = stocks.map((s) => {
         let sub = new Subscription('MERGE', s, fields);
         sub.setDataAdapter('STOCK');
         sub.addListener(tableListener);
@@ -493,10 +442,5 @@
     // Subscribe all
     subscriptions.forEach((sub) => myClient.subscribe(sub));
 </script>
-
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-<script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
-<script src="js/popper.min.js" crossorigin="anonymous"></script>
-<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 </body>
 </html>
