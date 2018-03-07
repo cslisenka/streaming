@@ -56,6 +56,9 @@
 //        url : '/ws/maxFrequency',
         url : '/ws/schema',
 //        url : '/ws/snapshotUpdate',
+        ack : (symbol) => {
+            // Not supported
+        },
         subscribe : (sub) => {
             return JSON.stringify(sub);
         },
@@ -65,7 +68,11 @@
     };
 
     const positionProtocol = {
-        url : '/ws/position',
+//        url : '/ws/position',
+        url : '/ws/bandwidth',
+        ack : (symbol) => {
+            return `A|${symbol}`;
+        },
         subscribe : (sub) => {
             // Schema is mandatory for position-based protocol
             let msg = `S|${sub.symbol}|${sub.schema}`;
@@ -91,8 +98,8 @@
     const config = {
 //        host : 'localhost:8081',
         host : 'localhost:9091',
-//        proto : positionProtocol
-        proto : jsonProtocol
+        proto : positionProtocol
+//        proto : jsonProtocol
     };
 
 
@@ -103,7 +110,7 @@
         symbol : 'STOCK_AAPL',
         command : 'subscribe',
         maxFrequency : 1,
-        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
     };
     subscriptions['STOCK_IBM'] = {
         symbol : 'STOCK_IBM',
@@ -165,16 +172,6 @@
             <div class="graph"></div>
         </div>
         <div class="col-3">
-            <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Status: <span id="connectionStatusValue">?</span></b><br>
-            </div>
-            <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Bandwidth: <span id="realBandwidthValue">?</span> kbit/s</b><br>
-            </div>
-            <div class="alert alert-dark" style="width: 250px;" role="alert">
-                <b>Max bandwidth: <span id="bandwidthValue"></span> kbit/s</b><br>
-                <input id="bandwidth" type="range" min="1" max="200" step="1">
-            </div>
             <span class="badge badge-primary">AAPL</span><br>
             <span class="badge badge-danger">IBM</span><br>
             <span class="badge badge-success">EPAM</span><br>
@@ -195,7 +192,6 @@
                     <th scope="col">ASK SIZE</th>
                     <th style="width: 100px" scope="col">LAST</th>
                     <th scope="col">TIMESTAMP</th>
-                    <th style="width: 320px;">MAX FREQUENCY</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -208,17 +204,6 @@
                     <td>-</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>
-                        <div class="alert alert-dark" role="alert">
-                            <div class="row">
-                                <div class="col-6">
-                                    <b><span id="frSTOCK_AAPL"></span> updates/s</b><br>
-                                </div>
-                                <div class="col-6">
-                                    <input id="slSTOCK_AAPL" type="range" min="0.1" max="100" step="0.1">
-                                </div>
-                            </div>
-                    </td>
                 </tr>
                 <tr id="STOCK_IBM">
                     <th>IBM</th>
@@ -229,18 +214,6 @@
                     <td>-</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>
-                        <div class="alert alert-dark" role="alert">
-                            <div class="row">
-                                <div class="col-6">
-                                    <b><span id="frSTOCK_IBM"></span> updates/s</b>
-                                </div>
-                                <div class="col-6">
-                                    <input id="slSTOCK_IBM" type="range" min="0.1" max="100" step="0.1">
-                                </div>
-                            </div>
-                        </div>
-                    </td>
                 </tr>
                 <tr id="STOCK_EPAM">
                     <th>EPAM</th>
@@ -251,18 +224,6 @@
                     <td>-</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>
-                        <div class="alert alert-dark" role="alert">
-                            <div class="row">
-                                <div class="col-6">
-                                    <b><span id="frSTOCK_EPAM"></span> updates/s</b><br>
-                                </div>
-                                <div class="col-6">
-                                    <input id="slSTOCK_EPAM" type="range" min="0.1" max="100" step="0.1">
-                                </div>
-                            </div>
-                        </div>
-                    </td>
                 </tr>
                 <tr id="STOCK_TSLA">
                     <th>TSLA</th>
@@ -273,32 +234,16 @@
                     <td>-</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>
-                        <div class="alert alert-dark" role="alert">
-                            <div class="row">
-                                <div class="col-6">
-                                    <b><span id="frSTOCK_TSLA"></span> updates/s</b><br>
-                                </div>
-                                <div class="col-6">
-                                    <input id="slSTOCK_TSLA" type="range" min="0.1" max="100" step="0.1">
-                                </div>
-                            </div>
-                        </div>
-                    </td>
                 </tr>
                 </tbody>
             </table>
-        </div>
-        <div class="col-12">
-            <h2>Errors</h2>
-            <div id="errors"></div>
         </div>
     </div>
 </div>
 
 <script>
     const limit = 8000,  // points at the chart for a line
-        interval = 20 * 1000, //
+        interval = 20 * 1000,
         now = Date.now(),
         startTime = new Date(now - interval);
 
@@ -436,8 +381,16 @@
 //        }
 
         result = updateSnapshot(result);
+
         tableListener.onUpdate(result);
         d3Listener.onUpdate(result);
+
+        console.log(e.data);
+        let ack = config.proto.ack(result.symbol);
+        if (ack) {
+            console.log(ack);
+            ws.send(ack);
+        }
     };
 </script>
 </body>

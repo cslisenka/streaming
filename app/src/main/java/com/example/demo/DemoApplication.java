@@ -1,8 +1,6 @@
 package com.example.demo;
 
 import com.example.demo.handler.*;
-import com.example.demo.protocol.JSONProtocol;
-import com.example.demo.protocol.PositionBasedProtocol;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +32,9 @@ public class DemoApplication implements WebSocketConfigurer {
     @Autowired
     private PositionProtocolHandler positionProtocolHandler;
 
+    @Autowired
+    private BandwidthControlHandler bandwidthControlHandler;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
@@ -45,8 +46,7 @@ public class DemoApplication implements WebSocketConfigurer {
         r.addHandler(schemaHandler, "/ws/schema").setAllowedOrigins("*");
         r.addHandler(snapshotUpdateHandler, "/ws/snapshotUpdate").setAllowedOrigins("*");
         r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
-        // TODO bandwidthControl
-//		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
+		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
     }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")
