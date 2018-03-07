@@ -1,6 +1,11 @@
 package com.example.demo;
 
-import com.example.demo.handler.*;
+import com.example.demo.handler.ex1.BasicHandler;
+import com.example.demo.handler.ex2.MaxFrequencyHandler;
+import com.example.demo.handler.ex3.SchemaHandler;
+import com.example.demo.handler.ex4.SnapshotUpdateHandler;
+import com.example.demo.handler.ex5.PositionProtocolHandler;
+import com.example.demo.handler.ex6.BandwidthControlHandler;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;

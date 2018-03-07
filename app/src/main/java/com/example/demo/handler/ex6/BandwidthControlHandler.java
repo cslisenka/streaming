@@ -1,9 +1,8 @@
-package com.example.demo.handler;
+package com.example.demo.handler.ex6;
 
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,27 +14,23 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
+public class BandwidthControlHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(BandwidthControlHandler.class);
 
     private static final String SYMBOL = "symbol";
-    private static final String MAX_FREQUENCY = "maxFrequency";
-    private static final String COMMAND = "command";
     private static final String SUBSCRIBE = "subscribe";
     private static final String UNSUBSCRIBE = "unsubscribe";
+    private static final String ACK = "ack";
 
     public static class SubscriptionInfo {
         Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
@@ -44,15 +39,17 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
 
     public static class SessionInfo {
         RateLimiter rm; // frequency limiter
+        List<String> schema; // If empty means sending full data
+        Map<String, String> dataSent = new HashMap<>();
+        AtomicBoolean ack = new AtomicBoolean(true);
     }
 
     private IPricingClient client;
-    private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
-    public MaxFrequencyHandler(IPricingClient client) {
+    public BandwidthControlHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }
@@ -62,50 +59,80 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
                 Map<String, String> data = new HashMap<>();
-                Set<WebSocketSession> sessions = new HashSet<>();
+                Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
                         data.putAll(sub.snapshot);
                         sub.sessions.forEach((s, info) -> {
                             if (info.rm.tryAcquire()) {
-                                sessions.add(s);
+                                if (info.ack.getAndSet(false)) {
+                                    sessions.put(s, info);
+                                }
                             }
                         });
                     }
                 }
 
-                sessions.forEach(s -> send(s, symbol, data));
+                sessions.forEach((s, info) -> send(s, symbol, data, info));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.info("Received ({}) {}", s.getId(), m.getPayload());
+        log.debug("Received ({}) {}", s.getId(), m.getPayload());
 
-        Map<String, Object> request = gson.fromJson(m.getPayload(), HashMap.class);
-        String symbol = request.get(SYMBOL).toString();
-        String command = request.get(COMMAND).toString();
+        // S - subscribe, U - unsubscribe | symbol | max frequency | schema
+        // S|AAPL|1.5|bid,ask,bidsize,asksize
+        String[] message = m.getPayload().split("\\|");
+        String symbol = message[1];
+        String command = "";;
+        switch (message[0]) {
+            case "S" :
+                command = SUBSCRIBE;
+                break;
+            case "U" :
+                command = UNSUBSCRIBE;
+                break;
+            case "A" :
+                command = ACK;
+                break;
+        }
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = request.containsKey(MAX_FREQUENCY) ?
-                    (double) request.get(MAX_FREQUENCY) : Double.MAX_VALUE;
+            double frequency = message.length > 3 ?
+                    Double.parseDouble(message[3]) : Double.MAX_VALUE;
 
-            subscribe(symbol, s, frequency);
+            List<String> schema = message.length > 2 ?
+                   Arrays.asList(message[2].split(",")) : new ArrayList<>();
+
+            subscribe(symbol, s, frequency, schema);
         }
 
         if (UNSUBSCRIBE.equals(command)) {
             unsubscribe(symbol, s);
         }
+
+        if (ACK.equals(command)) {
+            SubscriptionInfo sub = subscriptions.get(symbol);
+            synchronized (sub) {
+                sub.sessions.forEach((ses, info) -> {
+                    if (s.equals(ses)) {
+                        info.ack.set(true);
+                    }
+                });
+            }
+        }
     }
 
-    private void subscribe(String symbol, WebSocketSession s, double frequency) {
+    private void subscribe(String symbol, WebSocketSession s, double frequency, List<String> schema) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
             info.rm = RateLimiter.create(frequency);
+            info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 log.info("subscribing {}", symbol);
@@ -140,15 +167,36 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         }
     }
 
-    private void send(WebSocketSession s, String symbol, Map<String, String> data) {
+    private void send(WebSocketSession s, String symbol, Map<String, String> data, SessionInfo info) {
         try {
             HashMap<String, String> toSend = new HashMap<>();
             toSend.put(SYMBOL, symbol);
-            data.forEach((k, v) -> {
-                // Beautifying JSON
-                toSend.put(k.toLowerCase().replace("_", ""), v);
+
+            synchronized (info.dataSent) {
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    String key = k.toLowerCase().replace("_", "");
+
+                    boolean inSchema = info.schema == null || info.schema.contains(key);
+                    boolean notSent = !v.equals(info.dataSent.get(key));
+
+                    if (inSchema && notSent) {
+                        toSend.put(key, v);
+                    }
+                });
+
+                info.dataSent.putAll(toSend);
+            }
+
+            // Building message using position-based protocol
+            StringBuilder result = new StringBuilder();
+            // Absence of schema is not supported for position-based protocol
+            info.schema.forEach(field -> {
+                String value = toSend.get(field) != null ? toSend.get(field) : "";
+                result.append(value).append("|");
             });
-            s.sendMessage(new TextMessage(gson.toJson(toSend)));
+
+            s.sendMessage(new TextMessage(result.toString()));
         } catch (Exception e) {
             log.error("Failed to send data", e);
         }

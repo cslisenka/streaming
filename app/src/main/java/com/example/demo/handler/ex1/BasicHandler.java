@@ -1,4 +1,4 @@
-package com.example.demo.handler;
+package com.example.demo.handler.ex1;
 
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
@@ -12,12 +12,13 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @SuppressWarnings("Duplicates")
 @Component
