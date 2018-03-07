@@ -12,10 +12,9 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.annotation.PreDestroy;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,6 +24,8 @@ import java.util.concurrent.Executors;
 public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
+
+    private ExecutorService exec = Executors.newCachedThreadPool();
 
     private static final String SYMBOL = "symbol";
     private static final String COMMAND = "command";
@@ -71,7 +72,8 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
-            sub.sessions.put(s, new SessionInfo());
+            SessionInfo info = new SessionInfo();
+            sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
@@ -99,27 +101,29 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         if (sub != null) {
-            Set<WebSocketSession> sessions = new HashSet<>();
             synchronized (sub) {
-                sessions.addAll(sub.sessions.keySet());
+                sub.sessions.keySet().forEach(s -> send(s, symbol, data));
             }
-
-            sessions.forEach((s) -> {
-                send(s, symbol, data);
-            });
         }
     }
 
     private void send(WebSocketSession s, String symbol, Map<String, String> data) {
-        try {
-            HashMap<String, String> toSend = new HashMap<>();
-            toSend.put(SYMBOL, symbol);
-            // Beautifying JSON
-            data.forEach((k, v) -> toSend.put(k.toLowerCase().replace("_", ""), v));
-            s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (Exception e) {
-            log.error("Failed to send data", e);
-        }
+        exec.submit(() -> {
+            try {
+                HashMap<String, String> toSend = new HashMap<>();
+                toSend.put(SYMBOL, symbol);
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    toSend.put(k.toLowerCase().replace("_", ""), v);
+                });
+
+                synchronized (s) {
+                    s.sendMessage(new TextMessage(gson.toJson(toSend)));
+                }
+            } catch (Exception e) {
+                log.error("Failed to send data", e);
+            }
+        });
     }
 
     @Override
@@ -136,5 +140,10 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     @Override
     public void handleTransportError(WebSocketSession s, Throwable e) throws Exception {
         log.error("WS error (" + s.getId() + ")", e);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        exec.shutdownNow();
     }
 }

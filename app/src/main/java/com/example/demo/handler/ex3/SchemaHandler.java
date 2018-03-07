@@ -27,6 +27,8 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
 
     private static final Logger log = LoggerFactory.getLogger(SchemaHandler.class);
 
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
+
     private static final String SYMBOL = "symbol";
     private static final String SCHEMA = "schema";
     private static final String MAX_FREQUENCY = "maxFrequency";
@@ -41,13 +43,12 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
 
     public static class SessionInfo {
         RateLimiter rm; // frequency limiter
-        List<String> schema = new ArrayList<>(); // If empty means sending full data
+        List<String> schema; // If empty means sending full data
     }
 
     private IPricingClient client;
     private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
-    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
     public SchemaHandler(IPricingClient client) {
@@ -59,20 +60,15 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     public void start() {
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
-                Map<String, String> data = new HashMap<>();
-                Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
-                        data.putAll(sub.snapshot);
                         sub.sessions.forEach((s, info) -> {
                             if (info.rm.tryAcquire()) {
-                                sessions.put(s, info);
+                                send(s, symbol, new HashMap<>(sub.snapshot), info);
                             }
                         });
                     }
                 }
-
-                sessions.forEach((s, info) -> send(s, symbol, data, info));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
@@ -143,25 +139,27 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     }
 
     private void send(WebSocketSession s, String symbol, Map<String, String> data, SessionInfo info) {
-        try {
-            HashMap<String, String> toSend = new HashMap<>();
-            toSend.put(SYMBOL, symbol);
+        exec.submit(() -> {
+            try {
+                HashMap<String, String> toSend = new HashMap<>();
+                toSend.put(SYMBOL, symbol);
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    String key = k.toLowerCase().replace("_", "");
 
-            data.forEach((k, v) -> {
-                // Beautifying JSON
-                String key = k.toLowerCase().replace("_", "");
+                    boolean inSchema = info.schema == null || info.schema.contains(key);
+                    if (inSchema) {
+                        toSend.put(key, v);
+                    }
+                });
 
-                boolean inSchema = info.schema == null || info.schema.contains(key);
-                if (inSchema) {
-                    toSend.put(key, v);
+                synchronized (s) {
+                    s.sendMessage(new TextMessage(gson.toJson(toSend)));
                 }
-            });
-
-            log.info("{} {}", symbol, toSend);
-            s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (Exception e) {
-            log.error("Failed to send data", e);
-        }
+            } catch (Exception e) {
+                log.error("Failed to send data", e);
+            }
+        });
     }
 
     @Override

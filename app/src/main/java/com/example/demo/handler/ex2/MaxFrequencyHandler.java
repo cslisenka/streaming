@@ -16,9 +16,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
 
     private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
+
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     private static final String SYMBOL = "symbol";
     private static final String MAX_FREQUENCY = "maxFrequency";
@@ -48,7 +48,6 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     private IPricingClient client;
     private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
-    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
     public MaxFrequencyHandler(IPricingClient client) {
@@ -60,20 +59,15 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     public void start() {
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
-                Map<String, String> data = new HashMap<>();
-                Set<WebSocketSession> sessions = new HashSet<>();
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
-                        data.putAll(sub.snapshot);
                         sub.sessions.forEach((s, info) -> {
                             if (info.rm.tryAcquire()) {
-                                sessions.add(s);
+                                send(s, symbol, new HashMap<>(sub.snapshot));
                             }
                         });
                     }
                 }
-
-                sessions.forEach(s -> send(s, symbol, data));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
@@ -140,17 +134,22 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     }
 
     private void send(WebSocketSession s, String symbol, Map<String, String> data) {
-        try {
-            HashMap<String, String> toSend = new HashMap<>();
-            toSend.put(SYMBOL, symbol);
-            data.forEach((k, v) -> {
-                // Beautifying JSON
-                toSend.put(k.toLowerCase().replace("_", ""), v);
-            });
-            s.sendMessage(new TextMessage(gson.toJson(toSend)));
-        } catch (Exception e) {
-            log.error("Failed to send data", e);
-        }
+        exec.submit(() -> {
+            try {
+                HashMap<String, String> toSend = new HashMap<>();
+                toSend.put(SYMBOL, symbol);
+                data.forEach((k, v) -> {
+                    // Beautifying JSON
+                    toSend.put(k.toLowerCase().replace("_", ""), v);
+                });
+
+                synchronized (s) {
+                    s.sendMessage(new TextMessage(gson.toJson(toSend)));
+                }
+            } catch (Exception e) {
+                log.error("Failed to send data", e);
+            }
+        });
     }
 
     @Override

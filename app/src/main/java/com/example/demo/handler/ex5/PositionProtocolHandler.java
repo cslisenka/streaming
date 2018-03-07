@@ -26,6 +26,8 @@ public class PositionProtocolHandler extends TextWebSocketHandler implements IPr
 
     private static final Logger log = LoggerFactory.getLogger(PositionProtocolHandler.class);
 
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
+
     private static final String SYMBOL = "symbol";
     private static final String SCHEMA = "schema";
     private static final String MAX_FREQUENCY = "maxFrequency";
@@ -46,7 +48,6 @@ public class PositionProtocolHandler extends TextWebSocketHandler implements IPr
 
     private IPricingClient client;
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
-    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
     public PositionProtocolHandler(IPricingClient client) {
@@ -58,20 +59,15 @@ public class PositionProtocolHandler extends TextWebSocketHandler implements IPr
     public void start() {
         exec.scheduleAtFixedRate(() -> {
             subscriptions.forEach((symbol, sub) -> {
-                Map<String, String> data = new HashMap<>();
-                Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
-                        data.putAll(sub.snapshot);
                         sub.sessions.forEach((s, info) -> {
                             if (info.rm.tryAcquire()) {
-                                sessions.put(s, info);
+                                send(s, symbol, new HashMap<>(sub.snapshot), info);
                             }
                         });
                     }
                 }
-
-                sessions.forEach((s, info) -> send(s, symbol, data, info));
             });
         }, 0, 10, TimeUnit.MILLISECONDS);
     }
@@ -152,39 +148,42 @@ public class PositionProtocolHandler extends TextWebSocketHandler implements IPr
     }
 
     private void send(WebSocketSession s, String symbol, Map<String, String> data, SessionInfo info) {
-        try {
-            HashMap<String, String> toSend = new HashMap<>();
-            toSend.put(SYMBOL, symbol);
+        exec.submit(() -> {
+            try {
+                HashMap<String, String> toSend = new HashMap<>();
+                toSend.put(SYMBOL, symbol);
 
-            synchronized (info.dataSent) {
-                data.forEach((k, v) -> {
-                    // Beautifying JSON
-                    String key = k.toLowerCase().replace("_", "");
+                synchronized (info.dataSent) {
+                    data.forEach((k, v) -> {
+                        // Beautifying JSON
+                        String key = k.toLowerCase().replace("_", "");
 
-                    boolean inSchema = info.schema == null || info.schema.contains(key);
-                    boolean notSent = !v.equals(info.dataSent.get(key));
+                        boolean inSchema = info.schema.contains(key);
+                        boolean notSent = !v.equals(info.dataSent.get(key));
 
-                    if (inSchema && notSent) {
-                        toSend.put(key, v);
-                    }
+                        if (inSchema && notSent) {
+                            toSend.put(key, v);
+                        }
+                    });
+
+                    info.dataSent.putAll(toSend);
+                }
+
+                // Building message using position-based protocol
+                StringBuilder result = new StringBuilder();
+                // Absence of schema is not supported for position-based protocol
+                info.schema.forEach(field -> {
+                    String value = toSend.get(field) != null ? toSend.get(field) : "";
+                    result.append(value).append("|");
                 });
 
-                info.dataSent.putAll(toSend);
+                synchronized (s) {
+                    s.sendMessage(new TextMessage(result.toString()));
+                }
+            } catch (Exception e) {
+                log.error("Failed to send data", e);
             }
-
-            // Building message using position-based protocol
-            StringBuilder result = new StringBuilder();
-            // Absence of schema is not supported for position-based protocol
-            info.schema.forEach(field -> {
-                String value = toSend.get(field) != null ? toSend.get(field) : "";
-                result.append(value).append("|");
-            });
-
-            log.info("{} {}", symbol, result.toString());
-            s.sendMessage(new TextMessage(result.toString()));
-        } catch (Exception e) {
-            log.error("Failed to send data", e);
-        }
+        });
     }
 
     @Override

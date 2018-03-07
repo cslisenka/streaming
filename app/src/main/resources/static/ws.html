@@ -54,8 +54,8 @@
     const jsonProtocol = {
 //        url : '/ws/basic',
 //        url : '/ws/maxFrequency',
-        url : '/ws/schema',
-//        url : '/ws/snapshotUpdate',
+//        url : '/ws/schema',
+        url : '/ws/snapshotUpdate',
         ack : (symbol) => {
             // Not supported
         },
@@ -134,7 +134,9 @@
     ws.onopen = (e) => {
         console.log(`onopen ${e}`);
         for (k in subscriptions) {
-            ws.send(config.proto.subscribe(subscriptions[k]));
+            let msg = config.proto.subscribe(subscriptions[k]);
+            console.log(msg);
+            ws.send(msg);
         }
     };
 
@@ -372,20 +374,16 @@
     }
 
     ws.onmessage = (e) => {
+        console.log(e.data);
+
         let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
         let result = config.proto.parse(sub, e.data);
-
-        // For checking snapshot-update delivery
-//        if (!result.last) {
-//            console.log(result);
-//        }
 
         result = updateSnapshot(result);
 
         tableListener.onUpdate(result);
         d3Listener.onUpdate(result);
 
-        console.log(e.data);
         let ack = config.proto.ack(result.symbol);
         if (ack) {
             console.log(ack);
