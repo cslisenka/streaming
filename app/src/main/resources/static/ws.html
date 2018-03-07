@@ -41,6 +41,17 @@
         stroke: black;
         stroke-width: 1.5;
     }
+
+    .updated {
+        animation: colorchange 1s;
+        -webkit-animation: colorchange 1s;
+    }
+
+    @-webkit-keyframes colorchange {
+        0% {background: #ffffff;}
+        50% {background: #ffff00;}
+        100% {background: #ffffff;}
+    }
 </style>
 <script src="js/d3.v3.min.js"></script>
 <script src="js/lodash.js"></script>
@@ -150,18 +161,23 @@
             let cells = document.getElementById(stockName).cells;
             stockSeqNums[stockName] = stockSeqNums[stockName] || {};
 
-            let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
-            cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
-            stockSeqNums[stockName] = +result.seqnum;
-            cells[2].innerHTML = result.bid;
-            cells[3].innerHTML = result.bidsize;
-            cells[4].innerHTML = result.ask;
-            cells[5].innerHTML = result.asksize;
-            cells[6].innerHTML = result.last;
+            if (result.seqnum) {
+                let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
+                cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
+                stockSeqNums[stockName] = +result.seqnum;
+            }
 
-            let timestamp = new Date(+result.timestamp);
-            let diff = new Date().getTime() - timestamp;
-            cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
+            if (result.bid)     { cells[2].innerHTML = result.bid; }
+            if (result.bidsize) { cells[3].innerHTML = result.bidsize; }
+            if (result.ask)     { cells[4].innerHTML = result.ask; }
+            if (result.asksize) { cells[5].innerHTML = result.asksize; }
+            if (result.last)    { cells[6].innerHTML = `<div class="updated">${result.last}</div>`; }
+
+            if (result.timestamp) {
+                let timestamp = new Date(+result.timestamp);
+                let diff = new Date().getTime() - timestamp;
+                cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
+            }
         }
     };
 </script>
@@ -379,10 +395,10 @@
         let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
         let result = config.proto.parse(sub, e.data);
 
-        result = updateSnapshot(result);
+        let fullSnapshot = updateSnapshot(result);
 
         tableListener.onUpdate(result);
-        d3Listener.onUpdate(result);
+        d3Listener.onUpdate(fullSnapshot);
 
         let ack = config.proto.ack(result.symbol);
         if (ack) {

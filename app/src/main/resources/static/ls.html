@@ -49,7 +49,7 @@
 
     @-webkit-keyframes colorchange {
         0% {background: #ffffff;}
-        50% {background: #c2f2f2;}
+        50% {background: #ffff00;}
         100% {background: #ffffff;}
     }
 </style>
@@ -136,7 +136,7 @@
                             stockSeqNums[stockName] = value;
                             break;
                         case 'LAST':
-                            cell.innerHTML = `<span class="updated">${value}</span>`;
+                            cell.innerHTML = `<div class="updated">${value}</div>`;
                             break;
                         default:
                             cell.innerHTML = value;
