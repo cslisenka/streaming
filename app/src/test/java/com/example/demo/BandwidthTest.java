@@ -2,8 +2,6 @@ package com.example.demo;
 
 import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
-import com.google.gson.Gson;
-import sun.plugin2.message.Message;
 
 import java.io.*;
 import java.util.*;

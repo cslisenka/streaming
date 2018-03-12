@@ -127,7 +127,7 @@
             }
         };
 
-        var ws = new WebSocket("ws://localhost:9091/ws/basic");
+        var ws = new WebSocket(`ws://${location.hostname}:9091/ws/basic`);
 
         ws.onopen = (e) => {
             console.log(`onopen ${e}`);
