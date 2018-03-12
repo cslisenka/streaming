@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/page.css" crossorigin="anonymous">
+
+    <title>Max Frequency + WebSocket + Spring</title>
+</head>
+<body>
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/lodash.js"></script>
+    <!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
+    <script src="js/lightstreamer.js"></script>
+    <script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+    <script src="js/popper.min.js" crossorigin="anonymous"></script>
+    <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+    <br>
+    <div class="container">
+        <div class="row">
+            <div class="col-9">
+                <div class="graph"></div>
+            </div>
+            <div class="col-3">
+                <span class="badge badge-primary">AAPL</span><br>
+                <span class="badge badge-danger">IBM</span><br>
+                <span class="badge badge-success">EPAM</span><br>
+                <span class="badge badge-dark">TSLA</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">SYMBOL</th>
+                        <th scope="col">SEQ NUM</th>
+                        <th style="width: 100px" scope="col">BID</th>
+                        <th scope="col">BID SIZE</th>
+                        <th style="width: 100px" scope="col">ASK</th>
+                        <th scope="col">ASK SIZE</th>
+                        <th style="width: 100px" scope="col">LAST</th>
+                        <th scope="col">TIMESTAMP</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr id="STOCK_AAPL">
+                        <th>AAPL</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_IBM">
+                        <th>IBM</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_EPAM">
+                        <th>EPAM</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_TSLA">
+                        <th>TSLA</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/chart.js" crossorigin="anonymous"></script>
+    <script src="js/table.js" crossorigin="anonymous"></script>
+
+    <script>
+        var subscriptions = {};
+        subscriptions['STOCK_AAPL'] = {
+            symbol : 'STOCK_AAPL',
+            command : 'subscribe',
+            maxFrequency : 1
+        };
+        subscriptions['STOCK_IBM'] = {
+            symbol : 'STOCK_IBM',
+            command : 'subscribe',
+            maxFrequency : 10
+        };
+        subscriptions['STOCK_EPAM'] = {
+            symbol : 'STOCK_EPAM',
+            command : 'subscribe',
+            maxFrequency : 50
+        };
+        subscriptions['STOCK_TSLA'] = {
+            symbol : 'STOCK_TSLA',
+            command : 'subscribe',
+            maxFrequency : 100
+        };
+
+        const proto = {
+            format : (sub) => {
+                return JSON.stringify(sub);
+            },
+            parse : (response) => {
+                return JSON.parse(response);
+            }
+        };
+
+        var ws = new WebSocket("ws://localhost:9091/ws/maxFrequency");
+
+        ws.onopen = (e) => {
+            console.log(`onopen ${e}`);
+            for (k in subscriptions) {
+                let msg = proto.format(subscriptions[k]);
+                console.log(msg);
+                ws.send(msg);
+            }
+        };
+
+        ws.onmessage = (e) => {
+            console.log(e.data);
+
+            let result = proto.parse(e.data);
+
+            updateTable(result);
+            updateChart(result);
+        };
+
+        ws.onclose = (e) => { console.log(`onclose ${e}`); };
+        ws.onerror = (e) => { console.log(`onerror ${e}`); };
+    </script>
+</body>
+</html>

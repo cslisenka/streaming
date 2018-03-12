@@ -126,18 +126,6 @@
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
         };
 
-    //    const proto = {
-    //        ack : (symbol) => {
-    //            // Not supported
-    //        },
-    //        format : (sub) => {
-    //            return JSON.stringify(sub);
-    //        },
-    //        parse : (sub, response) => {
-    //            return JSON.parse(response);
-    //        }
-    //    };
-
         const proto = {
             ack : (symbol) => {
                 return `A|${symbol}`;
@@ -178,11 +166,7 @@
             return snapshots[data.symbol];
         }
 
-    //    var ws = new WebSocket("ws://localhost:8081/ws/basic");
-    //    var ws = new WebSocket("ws://localhost:8081/ws/maxFrequency");
-    //    var ws = new WebSocket("ws://localhost:8081/ws/snapshotUpdate");
-    //    var ws = new WebSocket("ws://localhost:8081/ws/position");
-        var ws = new WebSocket("ws://localhost:8081/ws/bandwidth");
+        var ws = new WebSocket("ws://localhost:9091/ws/bandwidth");
 
         ws.onopen = (e) => {
             console.log(`onopen ${e}`);
@@ -199,16 +183,14 @@
             let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
             let result = proto.parse(sub, e.data);
 
-            let fullSnapshot = updateSnapshot(result);
+            let snapshot = updateSnapshot(result);
 
             updateTable(result);
-            updateChart(fullSnapshot);
+            updateChart(snapshot);
 
             let ack = proto.ack(result.symbol);
-            if (ack) {
-                console.log(ack);
-                ws.send(ack);
-            }
+            console.log(ack);
+            ws.send(ack);
         };
 
         ws.onclose = (e) => { console.log(`onclose ${e}`); };
