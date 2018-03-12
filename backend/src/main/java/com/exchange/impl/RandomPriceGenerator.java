@@ -52,12 +52,11 @@ public class RandomPriceGenerator implements IPricingClient {
 
     @Override
     public void start() {
-        log.info("starting");
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
-            log.debug("subscriptions {}", subscriptions.size());
+//            log.debug("subscriptions {}", subscriptions.size());
             subscriptions.forEach((symbol, s) -> {
-                log.debug("generating for {}", symbol);
+//                log.debug("generating for {}", symbol);
 
                 if (s.seqNum == 0) {
                     // New subscription
@@ -116,7 +115,7 @@ public class RandomPriceGenerator implements IPricingClient {
 
                 listeners.forEach(l -> {
                     try {
-                        l.onData(symbol, data);
+                        l.onData(symbol, new HashMap<>(data));
                     } catch (Exception e) {
                         log.error("Error in executor", e);
                     }
