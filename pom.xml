@@ -10,6 +10,6 @@
         <module>ls-adapter</module>
 		<module>app</module>
 		<module>backend</module>
-	</modules>
+    </modules>
     <packaging>pom</packaging>
 </project>
