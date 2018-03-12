@@ -3,7 +3,6 @@ package com.example.demo.handler.ex4;
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +20,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.example.demo.MessageUtil.*;
+
 @SuppressWarnings("Duplicates")
 @Component
 public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPricingListener {
@@ -28,13 +29,6 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
     private static final Logger log = LoggerFactory.getLogger(SnapshotUpdateHandler.class);
 
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
-
-    private static final String SYMBOL = "symbol";
-    private static final String SCHEMA = "schema";
-    private static final String MAX_FREQUENCY = "maxFrequency";
-    private static final String COMMAND = "command";
-    private static final String SUBSCRIBE = "subscribe";
-    private static final String UNSUBSCRIBE = "unsubscribe";
 
     public static class SubscriptionInfo {
         Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
@@ -48,7 +42,6 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
     }
 
     private IPricingClient client;
-    private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
@@ -78,16 +71,13 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
         log.info("Received ({}) {}", s.getId(), m.getPayload());
 
-        Map<String, Object> request = gson.fromJson(m.getPayload(), HashMap.class);
+        Map<String, Object> request = parseJson(m.getPayload());
         String symbol = request.get(SYMBOL).toString();
         String command = request.get(COMMAND).toString();
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = request.containsKey(MAX_FREQUENCY) ?
-                    (double) request.get(MAX_FREQUENCY) : Double.MAX_VALUE;
-
-            List<String> schema = request.containsKey(SCHEMA) ?
-                    (List<String>) request.get(SCHEMA) : new ArrayList<>();
+            double frequency = (double) request.get(MAX_FREQUENCY);
+            List<String> schema = (List<String>) request.get(SCHEMA);
 
             subscribe(symbol, s, frequency, schema);
         }
@@ -107,7 +97,6 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
             }
         }
@@ -120,7 +109,6 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    log.info("unsubscribing {}", symbol);
                     client.unsubscribe(symbol);
                 }
             }
@@ -130,6 +118,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
     @Override
     public void onData(String symbol, Map<String, String> data) {
         log.debug("SEND {} {}", symbol, data);
+        toLowerCase(data);
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         if (sub != null) {
@@ -147,14 +136,11 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
 
                 synchronized (info.dataSent) {
                     data.forEach((k, v) -> {
-                        // Beautifying JSON
-                        String key = k.toLowerCase().replace("_", "");
-
-                        boolean inSchema = info.schema.contains(key);
-                        boolean notSent = !v.equals(info.dataSent.get(key));
+                        boolean inSchema = info.schema.contains(k);
+                        boolean notSent = !v.equals(info.dataSent.get(k));
 
                         if (inSchema && notSent) {
-                            toSend.put(key, v);
+                            toSend.put(k, v);
                         }
                     });
 
@@ -162,7 +148,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
                 }
 
                 synchronized (s) {
-                    s.sendMessage(new TextMessage(gson.toJson(toSend)));
+                    s.sendMessage(new TextMessage(toJson(toSend)));
                 }
             } catch (Exception e) {
                 log.error("Failed to send data", e);

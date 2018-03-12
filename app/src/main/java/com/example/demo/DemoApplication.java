@@ -25,6 +25,9 @@ public class DemoApplication implements WebSocketConfigurer {
 	@Autowired
 	private IPricingClient client;
 
+	@Autowired
+	private BasicHandler basic;
+
     @Autowired
     private MaxFrequencyHandler maxFrequencyHandler;
 
@@ -46,10 +49,10 @@ public class DemoApplication implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-	    r.addHandler(new BasicHandler(client), "/ws/basic").setAllowedOrigins("*");
-		r.addHandler(maxFrequencyHandler, "/ws/maxFrequency").setAllowedOrigins("*");
-        r.addHandler(schemaHandler, "/ws/schema").setAllowedOrigins("*");
-        r.addHandler(snapshotUpdateHandler, "/ws/snapshotUpdate").setAllowedOrigins("*");
+	    r.addHandler(basic,                   "/ws/basic").setAllowedOrigins("*");
+		r.addHandler(maxFrequencyHandler,     "/ws/maxFrequency").setAllowedOrigins("*");
+        r.addHandler(schemaHandler,           "/ws/schema").setAllowedOrigins("*");
+        r.addHandler(snapshotUpdateHandler,   "/ws/snapshotUpdate").setAllowedOrigins("*");
         r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
 		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
     }

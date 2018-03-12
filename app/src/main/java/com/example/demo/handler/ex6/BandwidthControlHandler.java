@@ -21,6 +21,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.example.demo.MessageUtil.*;
+
 @SuppressWarnings("Duplicates")
 @Component
 public class BandwidthControlHandler extends TextWebSocketHandler implements IPricingListener {
@@ -28,14 +30,6 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
     private static final Logger log = LoggerFactory.getLogger(BandwidthControlHandler.class);
 
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
-
-    private static final String SYMBOL = "symbol";
-    private static final String SCHEMA = "schema";
-    private static final String MAX_FREQUENCY = "maxFrequency";
-    private static final String COMMAND = "command";
-    private static final String SUBSCRIBE = "subscribe";
-    private static final String UNSUBSCRIBE = "unsubscribe";
-    private static final String ACK = "ack";
 
     public static class SubscriptionInfo {
         Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
@@ -79,31 +73,15 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.debug("Received ({}) {}", s.getId(), m.getPayload());
+        log.info("Received ({}) {}", s.getId(), m.getPayload());
 
-        // S - subscribe, U - unsubscribe | symbol | max frequency | schema
-        // S|AAPL|1.5|bid,ask,bidsize,asksize
-        String[] message = m.getPayload().split("\\|");
-        String symbol = message[1];
-        String command = "";;
-        switch (message[0]) {
-            case "S" :
-                command = SUBSCRIBE;
-                break;
-            case "U" :
-                command = UNSUBSCRIBE;
-                break;
-            case "A" :
-                command = ACK;
-                break;
-        }
+        Map<String, Object> request = parsePosition(m.getPayload());
+        String symbol = request.get(SYMBOL).toString();
+        String command = request.get(COMMAND).toString();
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = message.length > 3 ?
-                    Double.parseDouble(message[3]) : Double.MAX_VALUE;
-
-            List<String> schema = message.length > 2 ?
-                   Arrays.asList(message[2].split(",")) : new ArrayList<>();
+            double frequency = (double) request.get(MAX_FREQUENCY);
+            List<String> schema = (List<String>) request.get(SCHEMA);
 
             subscribe(symbol, s, frequency, schema);
         }
@@ -115,11 +93,8 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
         if (ACK.equals(command)) {
             SubscriptionInfo sub = subscriptions.get(symbol);
             synchronized (sub) {
-                sub.sessions.forEach((ses, info) -> {
-                    if (s.equals(ses)) {
-                        info.ack.set(true);
-                    }
-                });
+                SessionInfo info = sub.sessions.get(s);
+                info.ack.set(true);
             }
         }
     }
@@ -134,7 +109,6 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
             }
         }
@@ -147,7 +121,6 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    log.info("unsubscribing {}", symbol);
                     client.unsubscribe(symbol);
                 }
             }
@@ -157,6 +130,7 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
     @Override
     public void onData(String symbol, Map<String, String> data) {
         log.debug("SEND {} {}", symbol, data);
+        toLowerCase(data);
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         if (sub != null) {
@@ -174,30 +148,19 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
 
                 synchronized (info.dataSent) {
                     data.forEach((k, v) -> {
-                        // Beautifying JSON
-                        String key = k.toLowerCase().replace("_", "");
-
-                        boolean inSchema = info.schema.contains(key);
-                        boolean notSent = !v.equals(info.dataSent.get(key));
+                        boolean inSchema = info.schema.contains(k);
+                        boolean notSent = !v.equals(info.dataSent.get(k));
 
                         if (inSchema && notSent) {
-                            toSend.put(key, v);
+                            toSend.put(k, v);
                         }
                     });
 
                     info.dataSent.putAll(toSend);
                 }
 
-                // Building message using position-based protocol
-                StringBuilder result = new StringBuilder();
-                // Absence of schema is not supported for position-based protocol
-                info.schema.forEach(field -> {
-                    String value = toSend.get(field) != null ? toSend.get(field) : "";
-                    result.append(value).append("|");
-                });
-
                 synchronized (s) {
-                    s.sendMessage(new TextMessage(result.toString()));
+                    s.sendMessage(new TextMessage(toPositionBased(toSend, info.schema)));
                 }
             } catch (Exception e) {
                 log.error("Failed to send data", e);

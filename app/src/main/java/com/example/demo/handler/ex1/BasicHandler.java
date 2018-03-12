@@ -2,7 +2,6 @@ package com.example.demo.handler.ex1;
 
 import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
-import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.example.demo.MessageUtil.*;
+
 @SuppressWarnings("Duplicates")
 @Component
 public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
@@ -26,11 +27,6 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
 
     private ExecutorService exec = Executors.newCachedThreadPool();
-
-    private static final String SYMBOL = "symbol";
-    private static final String COMMAND = "command";
-    private static final String SUBSCRIBE = "subscribe";
-    private static final String UNSUBSCRIBE = "unsubscribe";
 
     public static class SubscriptionInfo {
         Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
@@ -41,7 +37,6 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     }
 
     private IPricingClient client;
-    private Gson gson = new Gson();
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
@@ -54,7 +49,7 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
         log.info("Received ({}) {}", s.getId(), m.getPayload());
 
-        Map<String, Object> request = gson.fromJson(m.getPayload(), HashMap.class);
+        Map<String, Object> request = parseJson(m.getPayload());
         String symbol = request.get(SYMBOL).toString();
         String command = request.get(COMMAND).toString();
 
@@ -98,6 +93,7 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     @Override
     public void onData(String symbol, Map<String, String> data) {
         log.debug("SEND {} {}", symbol, data);
+        toLowerCase(data);
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         if (sub != null) {
@@ -110,15 +106,10 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     private void send(WebSocketSession s, String symbol, Map<String, String> data) {
         exec.submit(() -> {
             try {
-                HashMap<String, String> toSend = new HashMap<>();
-                toSend.put(SYMBOL, symbol);
-                data.forEach((k, v) -> {
-                    // Beautifying JSON
-                    toSend.put(k.toLowerCase().replace("_", ""), v);
-                });
+                data.put(SYMBOL, symbol);
 
                 synchronized (s) {
-                    s.sendMessage(new TextMessage(gson.toJson(toSend)));
+                    s.sendMessage(new TextMessage(toJson(data)));
                 }
             } catch (Exception e) {
                 log.error("Failed to send data", e);
