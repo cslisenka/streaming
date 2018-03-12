@@ -7,52 +7,11 @@
     <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/page.css" crossorigin="anonymous">
 
-    <title>My stock portfolio</title>
+    <title>WebSocket + Spring</title>
 </head>
 <body>
-<style>
-    * {font-size: 16px;}
-
-    body {
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    }
-
-    .graph .axis {
-        stroke-width: 1;
-    }
-
-    .graph .axis .tick line {
-        stroke: black;
-    }
-
-    .graph .axis .tick text {
-        fill: black;
-        font-size: 0.7em;
-    }
-
-    .graph .axis .domain {
-        fill: none;
-        stroke: black;
-    }
-
-    .graph .group {
-        fill: none;
-        stroke: black;
-        stroke-width: 1.5;
-    }
-
-    .updated {
-        animation: colorchange 1s;
-        -webkit-animation: colorchange 1s;
-    }
-
-    @-webkit-keyframes colorchange {
-        0% {background: #ffffff;}
-        50% {background: #ffff00;}
-        100% {background: #ffffff;}
-    }
-</style>
 <script src="js/d3.v3.min.js"></script>
 <script src="js/lodash.js"></script>
 <!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
@@ -61,129 +20,7 @@
 <script src="js/popper.min.js" crossorigin="anonymous"></script>
 <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
 
-<script>
-    const jsonProtocol = {
-//        url : '/ws/basic',
-//        url : '/ws/maxFrequency',
-//        url : '/ws/schema',
-        url : '/ws/snapshotUpdate',
-        ack : (symbol) => {
-            // Not supported
-        },
-        subscribe : (sub) => {
-            return JSON.stringify(sub);
-        },
-        parse : (sub, response) => {
-            return JSON.parse(response);
-        }
-    };
-
-    const positionProtocol = {
-//        url : '/ws/position',
-        url : '/ws/bandwidth',
-        ack : (symbol) => {
-            return `A|${symbol}`;
-        },
-        subscribe : (sub) => {
-            // Schema is mandatory for position-based protocol
-            let msg = `S|${sub.symbol}|${sub.schema}`;
-            if (sub.maxFrequency) {
-                msg += `|${sub.maxFrequency}`;
-            }
-            return msg;
-        },
-        parse : (sub, response) => {
-            let t = response.split("|");
-            let result = {};
-            let i = 0;
-            for (k in sub.schema) {
-                if (t[i]) {
-                    result[sub.schema[k]] = t[i];
-                }
-                i++;
-            }
-            return result;
-        }
-    };
-
-    const config = {
-//        host : 'localhost:8081',
-        host : 'localhost:9091',
-        proto : positionProtocol
-//        proto : jsonProtocol
-    };
-
-
-    var ws = new WebSocket(`ws://${config.host}${config.proto.url}`);
-
-    var subscriptions = {};
-    subscriptions['STOCK_AAPL'] = {
-        symbol : 'STOCK_AAPL',
-        command : 'subscribe',
-        maxFrequency : 1,
-        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
-    };
-    subscriptions['STOCK_IBM'] = {
-        symbol : 'STOCK_IBM',
-        command : 'subscribe',
-        maxFrequency : 10,
-        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
-    };
-    subscriptions['STOCK_EPAM'] = {
-        symbol : 'STOCK_EPAM',
-        command : 'subscribe',
-        maxFrequency : 50,
-        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
-    };
-    subscriptions['STOCK_TSLA'] = {
-        symbol : 'STOCK_TSLA',
-        command : 'subscribe',
-        maxFrequency : 100,
-        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
-    };
-
-    ws.onopen = (e) => {
-        console.log(`onopen ${e}`);
-        for (k in subscriptions) {
-            let msg = config.proto.subscribe(subscriptions[k]);
-            console.log(msg);
-            ws.send(msg);
-        }
-    };
-
-    ws.onclose = (e) => { console.log(`onclose ${e}`); };
-    ws.onerror = (e) => { console.log(`onerror ${e}`); };
-
-    var stockSeqNums = {};
-    const tableListener = {
-        onUpdate : (result) => {
-            let stockName = result.symbol;
-            let cells = document.getElementById(stockName).cells;
-            stockSeqNums[stockName] = stockSeqNums[stockName] || {};
-
-            if (result.seqnum) {
-                let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
-                cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
-                stockSeqNums[stockName] = +result.seqnum;
-            }
-
-            if (result.bid)     { cells[2].innerHTML = result.bid; }
-            if (result.bidsize) { cells[3].innerHTML = result.bidsize; }
-            if (result.ask)     { cells[4].innerHTML = result.ask; }
-            if (result.asksize) { cells[5].innerHTML = result.asksize; }
-            if (result.last)    { cells[6].innerHTML = `<div class="updated">${result.last}</div>`; }
-
-            if (result.timestamp) {
-                let timestamp = new Date(+result.timestamp);
-                let diff = new Date().getTime() - timestamp;
-                cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
-            }
-        }
-    };
-</script>
-
 <br>
-
 <div class="container">
     <div class="row">
         <div class="col-9">
@@ -259,122 +96,74 @@
     </div>
 </div>
 
+<script src="js/chart.js" crossorigin="anonymous"></script>
+<script src="js/table.js" crossorigin="anonymous"></script>
+
 <script>
-    const limit = 8000,  // points at the chart for a line
-        interval = 20 * 1000,
-        now = Date.now(),
-        startTime = new Date(now - interval);
-
-    const width = 800,
-        height = 300;
-
-    const groups = {
-        STOCK_AAPL: {
-            value: 0,
-            color: 'blue',
-            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
-        },
-        STOCK_IBM: {
-            value: 0,
-            color: 'red',
-            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
-        },
-        STOCK_EPAM: {
-            value: 0,
-            color: 'green',
-            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
-        },
-        STOCK_TSLA: {
-            value: 0,
-            color: 'black',
-            data: d3.range(limit).map(() => {return {value:0, time: startTime}})
-        }
+    var subscriptions = {};
+    subscriptions['STOCK_AAPL'] = {
+        symbol : 'STOCK_AAPL',
+        command : 'subscribe',
+        maxFrequency : 1,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
+    };
+    subscriptions['STOCK_IBM'] = {
+        symbol : 'STOCK_IBM',
+        command : 'subscribe',
+        maxFrequency : 10,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
+    subscriptions['STOCK_EPAM'] = {
+        symbol : 'STOCK_EPAM',
+        command : 'subscribe',
+        maxFrequency : 50,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+    };
+    subscriptions['STOCK_TSLA'] = {
+        symbol : 'STOCK_TSLA',
+        command : 'subscribe',
+        maxFrequency : 100,
+        schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
     };
 
-    const x = d3.time.scale()
-        .domain([startTime, new Date(now)])
-        .range([0, width]);
+//    const proto = {
+//        ack : (symbol) => {
+//            // Not supported
+//        },
+//        format : (sub) => {
+//            return JSON.stringify(sub);
+//        },
+//        parse : (sub, response) => {
+//            return JSON.parse(response);
+//        }
+//    };
 
-    const y = d3.scale.linear()
-        .domain([0, 100])
-        .range([height, 0]);
-
-    const line = d3.svg.line()
-        .x((d) => {
-            let xValue = x(d.time);
-            return xValue > width ? width : xValue > 0 ? xValue : 0;
-        })
-        .y((d) => y(d.value));
-
-    const svg = d3.select('.graph').append('svg')
-        .attr('class', 'chart')
-        .attr('width', width)
-        .attr('height', height + 50);
-
-    const axis = svg.append('g')
-        .attr('class', 'x axis')
-        .attr('transform', 'translate(0,' + height + ')')
-        .call(x.axis = d3.svg.axis().scale(x).orient('bottom'));
-
-    const paths = svg.append('g');
-
-    for (let name in groups) {
-        let group = groups[name];
-        group.path = paths.append('path')
-            .data([group.data])
-            .attr('class', name + ' group')
-            .style('stroke', group.color);
-    }
-
-    function update(date) {
-        for (let name in groups) {
-            groups[name].path.attr('d', line);
-        }
-
-        // Shift domain
-        x.domain([new Date(date - interval), date]);
-
-        // Slide x-axis left
-        axis.transition()
-            .ease('ease')
-            .call(x.axis)
-
-        paths.transition().ease('ease');
-    }
-
-    const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
-
-    const d3Listener = {
-        onUpdate : (result) => {
-            let stockName = result.symbol,
-                value = result.ask,
-                date = new Date(+result.timestamp);
-
-            // Validating data
-            if (result.ask && result.timestamp) {
-                for (let name in groups) {
-                    // Add new values
-                    let group = groups[name],
-                        lastItem = group.data[group.data.length - 1],
-                        updated = stockName === name ? {time: date, value: value} : lastItem;
-
-                    if (lastItem.time === startTime) {
-                        lastItem.time = date;
-                    }
-
-                    group.data.push(updated);
-                    groups[name].data.shift();
-                }
-
-                throttledUpdate(date);
-            } else {
-                console.error(`there are no ask (${result.ask}) or timestamp (${result.timestamp}). symbol ${result.symbol} `)
+    const proto = {
+        ack : (symbol) => {
+            return `A|${symbol}`;
+        },
+        format : (sub) => {
+            // Schema is mandatory for position-based protocol
+            let msg = `S|${sub.symbol}|${sub.schema}`;
+            if (sub.maxFrequency) {
+                msg += `|${sub.maxFrequency}`;
             }
+            return msg;
+        },
+        parse : (sub, response) => {
+            let t = response.split("|");
+            let result = {};
+            let i = 0;
+            for (k in sub.schema) {
+                if (t[i]) {
+                    result[sub.schema[k]] = t[i];
+                }
+                i++;
+            }
+            return result;
         }
     };
-</script>
 
-<script>
     var snapshots = [];
     function updateSnapshot(data) {
         // Storing snapshot
@@ -389,23 +178,41 @@
         return snapshots[data.symbol];
     }
 
+//    var ws = new WebSocket("ws://localhost:8081/ws/basic");
+//    var ws = new WebSocket("ws://localhost:8081/ws/maxFrequency");
+//    var ws = new WebSocket("ws://localhost:8081/ws/snapshotUpdate");
+//    var ws = new WebSocket("ws://localhost:8081/ws/position");
+    var ws = new WebSocket("ws://localhost:8081/ws/bandwidth");
+
+    ws.onopen = (e) => {
+        console.log(`onopen ${e}`);
+        for (k in subscriptions) {
+            let msg = proto.format(subscriptions[k]);
+            console.log(msg);
+            ws.send(msg);
+        }
+    };
+
     ws.onmessage = (e) => {
         console.log(e.data);
 
         let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
-        let result = config.proto.parse(sub, e.data);
+        let result = proto.parse(sub, e.data);
 
         let fullSnapshot = updateSnapshot(result);
 
-        tableListener.onUpdate(result);
-        d3Listener.onUpdate(fullSnapshot);
+        updateTable(result);
+        updateChart(fullSnapshot);
 
-        let ack = config.proto.ack(result.symbol);
+        let ack = proto.ack(result.symbol);
         if (ack) {
             console.log(ack);
             ws.send(ack);
         }
     };
+
+    ws.onclose = (e) => { console.log(`onclose ${e}`); };
+    ws.onerror = (e) => { console.log(`onerror ${e}`); };
 </script>
 </body>
 </html>

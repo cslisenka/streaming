@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
     <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
 
-    <title>My stock portfolio</title>
+    <title>Lightstreamer</title>
 </head>
 <body>
 <style>
@@ -106,7 +106,7 @@
     });
 
     myClient.connectionOptions.setMaxBandwidth(config.initialMaxBandwidth);
-    myClient.connectionOptions.setForcedTransport("WS-POLLING");
+//    myClient.connectionOptions.setForcedTransport("WS-POLLING");
     myClient.connect();
 
     const stocks = ['STOCK_AAPL', 'STOCK_IBM', 'STOCK_EPAM', 'STOCK_TSLA'];
@@ -391,7 +391,7 @@
 
     const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not toString kill UI
 
-    const d3Listener = {
+    const chartListener = {
         onItemUpdate: (updateInfo) => {
             let stockName = updateInfo.getItemName(),
                 value = updateInfo.getValue('ASK'),
@@ -422,7 +422,7 @@
         let sub = new Subscription('MERGE', s, fields);
         sub.setDataAdapter('STOCK');
         sub.addListener(tableListener);
-        sub.addListener(d3Listener);
+        sub.addListener(chartListener);
         sub.setRequestedMaxFrequency(config.initialMaxFrequency);
 
         document.getElementById('fr' + s).innerHTML = '' + config.initialMaxFrequency;
