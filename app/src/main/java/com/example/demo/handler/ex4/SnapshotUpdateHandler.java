@@ -28,6 +28,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
 
     private static final Logger log = LoggerFactory.getLogger(SnapshotUpdateHandler.class);
 
+    private static final double MAX_ALLOWED_FREQUENCY = 20; // to updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {
@@ -78,7 +79,6 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
         if (SUBSCRIBE.equals(command)) {
             double frequency = (double) request.get(MAX_FREQUENCY);
             List<String> schema = (List<String>) request.get(SCHEMA);
-
             subscribe(symbol, s, frequency, schema);
         }
 
@@ -93,7 +93,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rm = RateLimiter.create(frequency);
+            info.rm = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {

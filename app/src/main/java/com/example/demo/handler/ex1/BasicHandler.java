@@ -12,8 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PreDestroy;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,7 +69,6 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
             SessionInfo info = new SessionInfo();
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
             }
         }
@@ -83,7 +81,6 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    log.info("unsubscribing {}", symbol);
                     client.unsubscribe(symbol);
                 }
             }

@@ -14,8 +14,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +28,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
 
     private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
 
+    private static final double MAX_ALLOWED_FREQUENCY = 20; // to updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {
@@ -90,10 +90,9 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rm = RateLimiter.create(frequency);
+            info.rm = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                log.info("subscribing {}", symbol);
                 client.subscribe(symbol);
             }
         }
@@ -106,7 +105,6 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    log.info("unsubscribing {}", symbol);
                     client.unsubscribe(symbol);
                 }
             }
