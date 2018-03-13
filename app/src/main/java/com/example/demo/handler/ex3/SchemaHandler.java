@@ -37,7 +37,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     }
 
     public static class SessionInfo {
-        RateLimiter rm; // frequency limiter
+        RateLimiter rate; // frequency limiter
         List<String> schema; // If empty means sending full data
     }
 
@@ -57,7 +57,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
                         sub.sessions.forEach((s, info) -> {
-                            if (info.rm.tryAcquire()) {
+                            if (info.rate.tryAcquire()) {
                                 send(s, symbol, new HashMap<>(sub.snapshot), info);
                             }
                         });
@@ -92,7 +92,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rm = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {

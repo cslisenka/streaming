@@ -37,7 +37,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     }
 
     public static class SessionInfo {
-        RateLimiter rm; // frequency limiter
+        RateLimiter rate; // frequency limiter
     }
 
     private IPricingClient client;
@@ -56,7 +56,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
                         sub.sessions.forEach((s, info) -> {
-                            if (info.rm.tryAcquire()) {
+                            if (info.rate.tryAcquire()) {
                                 send(s, symbol, new HashMap<>(sub.snapshot));
                             }
                         });
@@ -90,7 +90,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rm = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 client.subscribe(symbol);
