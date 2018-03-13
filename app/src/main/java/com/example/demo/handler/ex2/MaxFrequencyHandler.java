@@ -28,7 +28,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
 
     private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
 
-    private static final double MAX_ALLOWED_FREQUENCY = 20; // to updates per second
+    private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {

@@ -14,6 +14,8 @@ public class MessageUtil {
     public static final String SUBSCRIBE = "subscribe";
     public static final String UNSUBSCRIBE = "unsubscribe";
     public static final String ACK = "ack";
+    public static final String LOGIN = "login";
+    public static final String USER = "user";
 
     public static Map<String, Object> parseJson(String message) {
        Map<String, Object> result = new Gson().fromJson(message, HashMap.class);
@@ -39,6 +41,8 @@ public class MessageUtil {
         // S|AAPL|1.5|bid,ask,bidsize,asksize
         // A - acknowledge | symbol
         // A|STOCK_EPAM
+        // L - login | user
+        // L|user1
 
         String[] parts = message.split("\\|");
         switch (parts[0]) {
@@ -51,20 +55,26 @@ public class MessageUtil {
             case "A":
                 result.put(COMMAND, ACK);
                 break;
+            case "L":
+                result.put(COMMAND, LOGIN);
+                result.put(USER, parts[1]);
+                break;
         }
 
-        result.put(SYMBOL, parts[1]);
+        if (!LOGIN.equals(result.get(COMMAND))) {
+            result.put(SYMBOL, parts[1]);
 
-        if (parts.length > 2) {
-            result.put(SCHEMA, Arrays.asList(parts[2].split(",")));
-        } else {
-            result.put(SCHEMA, new ArrayList<>());
-        }
+            if (parts.length > 2) {
+                result.put(SCHEMA, Arrays.asList(parts[2].split(",")));
+            } else {
+                result.put(SCHEMA, new ArrayList<>());
+            }
 
-        if (parts.length > 3) {
-            result.put(MAX_FREQUENCY, Double.parseDouble(parts[3]));
-        } else {
-            result.put(MAX_FREQUENCY, Double.MAX_VALUE);
+            if (parts.length > 3) {
+                result.put(MAX_FREQUENCY, Double.parseDouble(parts[3]));
+            } else {
+                result.put(MAX_FREQUENCY, Double.MAX_VALUE);
+            }
         }
 
         return result;

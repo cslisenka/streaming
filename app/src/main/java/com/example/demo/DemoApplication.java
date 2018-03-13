@@ -6,6 +6,7 @@ import com.example.demo.handler.ex3.SchemaHandler;
 import com.example.demo.handler.ex4.SnapshotUpdateHandler;
 import com.example.demo.handler.ex5.PositionProtocolHandler;
 import com.example.demo.handler.ex6.BandwidthControlHandler;
+import com.example.demo.handler.ex7.BandwidthLimitPerUserHandler;
 import com.exchange.IPricingClient;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class DemoApplication implements WebSocketConfigurer {
     @Autowired
     private BandwidthControlHandler bandwidthControlHandler;
 
+    @Autowired
+    private BandwidthLimitPerUserHandler bandwidthLimitPerUserHandler;
+
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
 	}
@@ -55,6 +59,7 @@ public class DemoApplication implements WebSocketConfigurer {
         r.addHandler(snapshotUpdateHandler,   "/ws/snapshotUpdate").setAllowedOrigins("*");
         r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
 		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
+        r.addHandler(bandwidthLimitPerUserHandler, "/ws/bandwidthPerUser").setAllowedOrigins("*");
     }
 
     @Bean(initMethod = "start", destroyMethod = "shutdown")

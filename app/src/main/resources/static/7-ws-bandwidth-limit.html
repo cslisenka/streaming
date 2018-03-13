@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/highlightjs-github-theme.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/range.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/page.css" crossorigin="anonymous">
+
+    <title>WebSocket + Spring</title>
+</head>
+<body>
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/lodash.js"></script>
+    <!-- Generated: http://www.lightstreamer.com/docs/client_javascript_tools/generator.html -->
+    <script src="js/lightstreamer.js"></script>
+    <script src="js/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+    <script src="js/popper.min.js" crossorigin="anonymous"></script>
+    <script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+    <br>
+    <div class="container">
+        <div class="row">
+            <div class="col-3">
+                <div class="alert alert-dark" style="width: 250px;" role="alert">
+                    <b>Messages per second: <span id="messagesPerSecond">?</span></b><br>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="alert alert-dark" style="width: 250px;" role="alert">
+                    <b>Symbols per second: <span id="symbolsPerSecond">?</span></b><br>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-9">
+                <div class="graph"></div>
+            </div>
+            <div class="col-3">
+                <span class="badge badge-primary">AAPL</span><br>
+                <span class="badge badge-danger">IBM</span><br>
+                <span class="badge badge-success">EPAM</span><br>
+                <span class="badge badge-dark">TSLA</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">SYMBOL</th>
+                        <th scope="col">SEQ NUM</th>
+                        <th style="width: 100px" scope="col">BID</th>
+                        <th scope="col">BID SIZE</th>
+                        <th style="width: 100px" scope="col">ASK</th>
+                        <th scope="col">ASK SIZE</th>
+                        <th style="width: 100px" scope="col">LAST</th>
+                        <th scope="col">TIMESTAMP</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr id="STOCK_AAPL">
+                        <th>AAPL</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_IBM">
+                        <th>IBM</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_EPAM">
+                        <th>EPAM</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="STOCK_TSLA">
+                        <th>TSLA</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="table-warning">-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/chart.js" crossorigin="anonymous"></script>
+    <script src="js/table.js" crossorigin="anonymous"></script>
+
+    <script>
+        var subscriptions = {};
+        subscriptions['STOCK_AAPL'] = {
+            symbol : 'STOCK_AAPL',
+            command : 'subscribe',
+            maxFrequency : 1,
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
+        };
+        subscriptions['STOCK_IBM'] = {
+            symbol : 'STOCK_IBM',
+            command : 'subscribe',
+            maxFrequency : 10,
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+        };
+        subscriptions['STOCK_EPAM'] = {
+            symbol : 'STOCK_EPAM',
+            command : 'subscribe',
+            maxFrequency : 50,
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+        };
+        subscriptions['STOCK_TSLA'] = {
+            symbol : 'STOCK_TSLA',
+            command : 'subscribe',
+            maxFrequency : 100,
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+        };
+
+        const proto = {
+            login : (user) => {
+                return `L|${user}`;
+            },
+            ack : (symbol) => {
+                return `A|${symbol}`;
+            },
+            format : (sub) => {
+                // Schema is mandatory for position-based protocol
+                let msg = `S|${sub.symbol}|${sub.schema}`;
+                if (sub.maxFrequency) {
+                    msg += `|${sub.maxFrequency}`;
+                }
+                return msg;
+            },
+            parse : (sub, response) => {
+                let t = response.split("|");
+                let result = {};
+                let i = 0;
+                for (k in sub.schema) {
+                    if (t[i]) {
+                        result[sub.schema[k]] = t[i];
+                    }
+                    i++;
+                }
+                return result;
+            }
+        };
+
+        var snapshots = [];
+        function updateSnapshot(data) {
+            // Storing snapshot
+            if (!snapshots[data.symbol]) {
+                snapshots[data.symbol] = {};
+            }
+
+            for (var k in data) {
+                snapshots[data.symbol][k] = data[k];
+            }
+
+            return snapshots[data.symbol];
+        }
+
+        var ws = new WebSocket(`ws://${location.hostname}:9091/ws/bandwidthPerUser`);
+
+        ws.onopen = (e) => {
+            console.log(`onopen ${e}`);
+
+            let loginMsg = proto.login("user1");
+            ws.send(loginMsg);
+
+            for (k in subscriptions) {
+                let msg = proto.format(subscriptions[k]);
+                console.log(msg);
+                ws.send(msg);
+            }
+        };
+
+        const counter = {
+            messages : 0,
+            symbols : 0,
+            update : function(length) {
+                this.messages++;
+                this.symbols += length;
+            },
+            clear : function() {
+                this.messages = 0;
+                this.symbols = 0;
+            }
+        };
+
+        setInterval(() => {
+            document.getElementById("messagesPerSecond").innerHTML = `${counter.messages}`;
+            document.getElementById("symbolsPerSecond").innerHTML = `${counter.symbols}`;
+            counter.clear();
+        }, 1000);
+
+        ws.onmessage = (e) => {
+            counter.update(e.data.length);
+
+            let sub = subscriptions[e.data.split("|")[0]]; // dirty fix, assume symbol name is the first
+            let result = proto.parse(sub, e.data);
+
+            let snapshot = updateSnapshot(result);
+
+            updateTable(result);
+            updateChart(snapshot);
+
+            let ack = proto.ack(result.symbol);
+            ws.send(ack);
+        };
+
+        ws.onclose = (e) => { console.log(`onclose ${e}`); };
+        ws.onerror = (e) => { console.log(`onerror ${e}`); };
+    </script>
+</body>
+</html>

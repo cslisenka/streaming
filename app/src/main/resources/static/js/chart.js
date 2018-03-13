@@ -80,7 +80,7 @@ function update(date) {
     paths.transition().ease('ease');
 }
 
-const throttledUpdate =_.throttle(update, 500); // updating chart only every 500 ms, not to kill UI
+const throttledUpdate =_.throttle(update, 1000); // updating chart only every 500 ms, not to kill UI
 
 function updateChart(result) {
     let stockName = result.symbol,

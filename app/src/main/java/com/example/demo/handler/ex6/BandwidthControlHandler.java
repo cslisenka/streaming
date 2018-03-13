@@ -29,7 +29,7 @@ public class BandwidthControlHandler extends TextWebSocketHandler implements IPr
 
     private static final Logger log = LoggerFactory.getLogger(BandwidthControlHandler.class);
 
-    private static final double MAX_ALLOWED_FREQUENCY = 20; // to updates per second
+    private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {
