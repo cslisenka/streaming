@@ -93,6 +93,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
             info.rm = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 client.subscribe(symbol);

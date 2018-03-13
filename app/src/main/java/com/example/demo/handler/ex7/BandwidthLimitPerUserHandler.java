@@ -78,8 +78,6 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler implement
                                     info.dataSent.putAll(toSend);
                                     info.ack.set(true);
                                     send(s, message);
-                                } else {
-                                    log.error("Rejected {}", symbol);
                                 }
                             }
                         });

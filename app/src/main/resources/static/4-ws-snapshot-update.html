@@ -23,6 +23,18 @@
     <br>
     <div class="container">
         <div class="row">
+            <div class="col-3">
+                <div class="alert alert-dark" style="width: 250px;" role="alert">
+                    <b>Messages per second: <span id="messagesPerSecond">?</span></b><br>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="alert alert-dark" style="width: 300px;" role="alert">
+                    <b>Chars per second: <span id="symbolsPerSecond">?</span></b><br>
+                </div>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-9">
                 <div class="graph"></div>
             </div>
@@ -98,6 +110,7 @@
 
     <script src="js/chart.js" crossorigin="anonymous"></script>
     <script src="js/table.js" crossorigin="anonymous"></script>
+    <script src="js/counter.js" crossorigin="anonymous"></script>
 
     <script>
         var subscriptions = {};
@@ -161,7 +174,7 @@
         };
 
         ws.onmessage = (e) => {
-            console.log(e.data);
+            counter.update(e.data.length);
 
             let result = proto.parse(e.data);
             let snapshot = updateSnapshot(result);
