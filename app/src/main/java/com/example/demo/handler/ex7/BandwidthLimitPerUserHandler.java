@@ -89,7 +89,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler implement
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.debug("Received ({}) {}", s.getId(), m.getPayload());
+        log.info("Received ({}) {}", s.getId(), m.getPayload());
 
         Map<String, Object> request = parsePosition(m.getPayload());
         String command = request.get(COMMAND).toString();
