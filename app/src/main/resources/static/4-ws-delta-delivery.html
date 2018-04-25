@@ -162,7 +162,7 @@
             return snapshots[data.symbol];
         }
 
-        var ws = new WebSocket(`ws://${location.hostname}:9091/ws/snapshotUpdate`);
+        var ws = new WebSocket(`ws://${location.hostname}:9091/ws/deltaDelivery`);
 
         ws.onopen = (e) => {
             console.log(`onopen ${e}`);

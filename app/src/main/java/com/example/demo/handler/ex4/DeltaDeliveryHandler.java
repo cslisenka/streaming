@@ -24,9 +24,9 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPricingListener {
+public class DeltaDeliveryHandler extends TextWebSocketHandler implements IPricingListener {
 
-    private static final Logger log = LoggerFactory.getLogger(SnapshotUpdateHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(DeltaDeliveryHandler.class);
 
     private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
@@ -46,7 +46,7 @@ public class SnapshotUpdateHandler extends TextWebSocketHandler implements IPric
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
-    public SnapshotUpdateHandler(IPricingClient client) {
+    public DeltaDeliveryHandler(IPricingClient client) {
         this.client = client;
         client.addListener(this);
     }

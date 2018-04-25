@@ -3,7 +3,7 @@ package com.example.demo;
 import com.example.demo.handler.ex1.BasicHandler;
 import com.example.demo.handler.ex2.MaxFrequencyHandler;
 import com.example.demo.handler.ex3.SchemaHandler;
-import com.example.demo.handler.ex4.SnapshotUpdateHandler;
+import com.example.demo.handler.ex4.DeltaDeliveryHandler;
 import com.example.demo.handler.ex5.PositionProtocolHandler;
 import com.example.demo.handler.ex6.BandwidthControlHandler;
 import com.example.demo.handler.ex7.BandwidthLimitPerUserHandler;
@@ -36,7 +36,7 @@ public class DemoApplication implements WebSocketConfigurer {
     private SchemaHandler schemaHandler;
 
     @Autowired
-    private SnapshotUpdateHandler snapshotUpdateHandler;
+    private DeltaDeliveryHandler deltaDeliveryHandler;
 
     @Autowired
     private PositionProtocolHandler positionProtocolHandler;
@@ -56,7 +56,7 @@ public class DemoApplication implements WebSocketConfigurer {
 	    r.addHandler(basic,                   "/ws/basic").setAllowedOrigins("*");
 		r.addHandler(maxFrequencyHandler,     "/ws/maxFrequency").setAllowedOrigins("*");
         r.addHandler(schemaHandler,           "/ws/schema").setAllowedOrigins("*");
-        r.addHandler(snapshotUpdateHandler,   "/ws/snapshotUpdate").setAllowedOrigins("*");
+        r.addHandler(deltaDeliveryHandler,   "/ws/deltaDelivery").setAllowedOrigins("*");
         r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
 		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
         r.addHandler(bandwidthLimitPerUserHandler, "/ws/bandwidthPerUser").setAllowedOrigins("*");
