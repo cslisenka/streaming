@@ -124,19 +124,19 @@
             symbol : 'STOCK_IBM',
             command : 'subscribe',
             maxFrequency : 10,
-            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_EPAM'] = {
             symbol : 'STOCK_EPAM',
             command : 'subscribe',
             maxFrequency : 50,
-            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_TSLA'] = {
             symbol : 'STOCK_TSLA',
             command : 'subscribe',
             maxFrequency : 100,
-            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last"] // missing bidsize,asksize
+            schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
 
         const proto = {

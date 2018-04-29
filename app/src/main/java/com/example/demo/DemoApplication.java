@@ -14,9 +14,19 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.HandshakeFailureException;
+import org.springframework.web.socket.server.HandshakeHandler;
+import org.springframework.web.socket.server.HandshakeInterceptor;
+import org.springframework.web.socket.server.standard.TomcatRequestUpgradeStrategy;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
+
+import java.util.Map;
 
 @Configuration
 @EnableWebSocket
@@ -53,7 +63,7 @@ public class DemoApplication implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
-	    r.addHandler(basic,                   "/ws/basic").setAllowedOrigins("*");
+        r.addHandler(basic, "/ws/basic").setAllowedOrigins("*");
 		r.addHandler(maxFrequencyHandler,     "/ws/maxFrequency").setAllowedOrigins("*");
         r.addHandler(schemaHandler,           "/ws/schema").setAllowedOrigins("*");
         r.addHandler(deltaDeliveryHandler,   "/ws/deltaDelivery").setAllowedOrigins("*");
