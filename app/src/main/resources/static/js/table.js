@@ -6,19 +6,25 @@ function updateTable(result) {
 
     if (result.seqnum) {
         let diffSN = +result.seqnum - (stockSeqNums[stockName] || 0);
-        cells[1].innerHTML = `${result.seqnum} <br> (${diffSN})`;
+        cells[1].innerHTML = `1 of ${diffSN}`;
         stockSeqNums[stockName] = +result.seqnum;
     }
-
-    if (result.bid)     { cells[2].innerHTML = result.bid; }
-    if (result.bidsize) { cells[3].innerHTML = result.bidsize; }
-    if (result.ask)     { cells[4].innerHTML = result.ask; }
-    if (result.asksize) { cells[5].innerHTML = result.asksize; }
-    if (result.last)    { cells[6].innerHTML = `<div class="updated">${result.last}</div>`; }
 
     if (result.timestamp) {
         let timestamp = new Date(+result.timestamp);
         let diff = new Date().getTime() - timestamp;
-        cells[7].innerHTML = `${timestamp.toLocaleTimeString('it-IT')} <br> (${diff} ms)`;
+        cells[2].innerHTML = `${diff} ms`;
+    }
+
+    setIfChanged(cells[3], result.bid);
+    setIfChanged(cells[4], result.bidsize);
+    setIfChanged(cells[5], result.ask);
+    setIfChanged(cells[6], result.asksize);
+    setIfChanged(cells[7], result.last);
+}
+
+function setIfChanged(row, value) {
+    if (value && row.innerHTML != `<div class="updated">${value}</div>`) {
+        row.innerHTML = `<div class="updated">${value}</div>`;
     }
 }
