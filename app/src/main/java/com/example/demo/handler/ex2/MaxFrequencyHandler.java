@@ -1,7 +1,7 @@
 package com.example.demo.handler.ex2;
 
-import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +14,9 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -40,13 +42,13 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
         RateLimiter rate; // frequency limiter
     }
 
-    private IPricingClient client;
+    private RandomPriceGenerator gen;
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
-    public MaxFrequencyHandler(IPricingClient client) {
-        this.client = client;
-        client.addListener(this);
+    public MaxFrequencyHandler(RandomPriceGenerator gen) {
+        this.gen = gen;
+        gen.addListener(this);
     }
 
     @PostConstruct
@@ -93,7 +95,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
             info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                client.subscribe(symbol);
+                gen.subscribe(symbol);
             }
         }
     }
@@ -105,7 +107,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    client.unsubscribe(symbol);
+                    gen.unsubscribe(symbol);
                 }
             }
         }

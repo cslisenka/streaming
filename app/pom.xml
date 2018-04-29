@@ -23,7 +23,7 @@
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>backend</artifactId>
+            <artifactId>price-generator</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 

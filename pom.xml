@@ -9,7 +9,7 @@
     <modules>
         <module>ls-adapter</module>
 		<module>app</module>
-		<module>backend</module>
+		<module>price-generator</module>
     </modules>
     <packaging>pom</packaging>
 </project>

@@ -1,7 +1,7 @@
 package com.example.demo.handler.ex7;
 
-import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +14,9 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,16 +50,16 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler implement
         RateLimiter bandwidth = RateLimiter.create(1_000); // 1 kB per second per user
     }
 
-    private IPricingClient client;
+    private RandomPriceGenerator gen;
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     private Map<String, UserLimits> users = new ConcurrentHashMap<>();
     private Map<WebSocketSession, UserLimits> sessionsToUsers = new ConcurrentHashMap<>();
 
     @Autowired
-    public BandwidthLimitPerUserHandler(IPricingClient client) {
-        this.client = client;
-        client.addListener(this);
+    public BandwidthLimitPerUserHandler(RandomPriceGenerator gen) {
+        this.gen = gen;
+        gen.addListener(this);
     }
 
     @PostConstruct
@@ -133,7 +135,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler implement
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                client.subscribe(symbol);
+                gen.subscribe(symbol);
             }
         }
     }
@@ -145,7 +147,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler implement
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    client.unsubscribe(symbol);
+                    gen.unsubscribe(symbol);
                 }
             }
         }

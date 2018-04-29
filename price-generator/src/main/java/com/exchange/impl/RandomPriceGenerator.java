@@ -1,6 +1,5 @@
 package com.exchange.impl;
 
-import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,9 +7,12 @@ import org.slf4j.LoggerFactory;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class RandomPriceGenerator implements IPricingClient {
+public class RandomPriceGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(RandomPriceGenerator.class);
 
@@ -44,24 +46,20 @@ public class RandomPriceGenerator implements IPricingClient {
         long avgVolume;
     }
 
-    @Override
     public void subscribe(String symbol) {
         subscriptions.put(symbol, new Snapshot());
         log.info("{}", subscriptions.toString());
     }
 
-    @Override
     public void unsubscribe(String symbol) {
         subscriptions.remove(symbol);
         log.info("{}", subscriptions.toString());
     }
 
-    @Override
     public void addListener(IPricingListener listener) {
         listeners.add(listener);
     }
 
-    @Override
     public void start() {
         Random r = new Random();
         executor.scheduleWithFixedDelay(() -> {
@@ -209,7 +207,6 @@ public class RandomPriceGenerator implements IPricingClient {
         return lowProbability(r) && r.nextBoolean();
     }
 
-    @Override
     public void shutdown() {
         executor.shutdown();
     }

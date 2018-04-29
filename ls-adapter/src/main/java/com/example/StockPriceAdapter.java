@@ -1,6 +1,5 @@
 package com.example;
 
-import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
 import com.lightstreamer.interfaces.data.*;
@@ -16,7 +15,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
 
     private ItemEventListener listener;
 
-    private final IPricingClient gen = new RandomPriceGenerator(10);
+    private final RandomPriceGenerator gen = new RandomPriceGenerator(10);
     private final Map<String, Object> items = new ConcurrentHashMap<>();
 
     @Override

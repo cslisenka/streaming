@@ -1,7 +1,7 @@
 package com.example.demo.handler.ex3;
 
-import com.exchange.IPricingClient;
 import com.exchange.IPricingListener;
+import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +14,9 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -41,13 +43,13 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
         List<String> schema; // If empty means sending full data
     }
 
-    private IPricingClient client;
+    private RandomPriceGenerator gen;
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
-    public SchemaHandler(IPricingClient client) {
-        this.client = client;
-        client.addListener(this);
+    public SchemaHandler(RandomPriceGenerator gen) {
+        this.gen = gen;
+        gen.addListener(this);
     }
 
     @PostConstruct
@@ -96,7 +98,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                client.subscribe(symbol);
+                gen.subscribe(symbol);
             }
         }
     }
@@ -108,7 +110,7 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    client.unsubscribe(symbol);
+                    gen.unsubscribe(symbol);
                 }
             }
         }

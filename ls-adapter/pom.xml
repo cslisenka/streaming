@@ -44,7 +44,7 @@
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>backend</artifactId>
+            <artifactId>price-generator</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>com.lightstreamer</groupId>
-            <artifactId>ls-javase-client</artifactId>
+            <artifactId>ls-javase-gen</artifactId>
             <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
