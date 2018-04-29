@@ -1,6 +1,5 @@
 package com.example.demo.handler.ex3;
 
-import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
@@ -26,7 +25,7 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class SchemaHandler extends TextWebSocketHandler implements IPricingListener {
+public class SchemaHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaHandler.class);
 
@@ -49,7 +48,17 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
     @Autowired
     public SchemaHandler(RandomPriceGenerator gen) {
         this.gen = gen;
-        gen.addListener(this);
+        gen.addListener((symbol, data) -> {
+            log.debug("SEND {} {}", symbol, data);
+            toLowerCase(data);
+
+            SubscriptionInfo sub = subscriptions.get(symbol);
+            if (sub != null) {
+                synchronized (sub) {
+                    sub.snapshot.putAll(data);
+                }
+            }
+        });
     }
 
     @PostConstruct
@@ -112,19 +121,6 @@ public class SchemaHandler extends TextWebSocketHandler implements IPricingListe
                     subscriptions.remove(symbol);
                     gen.unsubscribe(symbol);
                 }
-            }
-        }
-    }
-
-    @Override
-    public void onData(String symbol, Map<String, String> data) {
-        log.debug("SEND {} {}", symbol, data);
-        toLowerCase(data);
-
-        SubscriptionInfo sub = subscriptions.get(symbol);
-        if (sub != null) {
-            synchronized (sub) {
-                sub.snapshot.putAll(data);
             }
         }
     }

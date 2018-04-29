@@ -26,7 +26,7 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class DeltaDeliveryHandler extends TextWebSocketHandler implements IPricingListener {
+public class DeltaDeliveryHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(DeltaDeliveryHandler.class);
 
@@ -50,7 +50,17 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler implements IPrici
     @Autowired
     public DeltaDeliveryHandler(RandomPriceGenerator gen) {
         this.gen = gen;
-        gen.addListener(this);
+        gen.addListener((symbol, data) -> {
+            log.debug("SEND {} {}", symbol, data);
+            toLowerCase(data);
+
+            SubscriptionInfo sub = subscriptions.get(symbol);
+            if (sub != null) {
+                synchronized (sub) {
+                    sub.snapshot.putAll(data);
+                }
+            }
+        });
     }
 
     @PostConstruct
@@ -113,19 +123,6 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler implements IPrici
                     subscriptions.remove(symbol);
                     gen.unsubscribe(symbol);
                 }
-            }
-        }
-    }
-
-    @Override
-    public void onData(String symbol, Map<String, String> data) {
-        log.debug("SEND {} {}", symbol, data);
-        toLowerCase(data);
-
-        SubscriptionInfo sub = subscriptions.get(symbol);
-        if (sub != null) {
-            synchronized (sub) {
-                sub.snapshot.putAll(data);
             }
         }
     }

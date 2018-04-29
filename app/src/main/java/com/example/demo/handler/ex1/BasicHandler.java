@@ -1,8 +1,6 @@
 package com.example.demo.handler.ex1;
 
-import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
-import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +12,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.PreDestroy;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -24,7 +21,7 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class BasicHandler extends TextWebSocketHandler implements IPricingListener {
+public class BasicHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
 
@@ -44,7 +41,17 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
     @Autowired
     public BasicHandler(RandomPriceGenerator gen) {
         this.gen = gen;
-        gen.addListener(this);
+        gen.addListener((symbol, data) -> {
+            log.debug("SEND {} {}", symbol, data);
+            toLowerCase(data);
+
+            SubscriptionInfo sub = subscriptions.get(symbol);
+            if (sub != null) {
+                synchronized (sub) {
+                    sub.sessions.keySet().forEach(s -> send(s, symbol, data));
+                }
+            }
+        });
     }
 
     @Override
@@ -86,19 +93,6 @@ public class BasicHandler extends TextWebSocketHandler implements IPricingListen
                     subscriptions.remove(symbol);
                     gen.unsubscribe(symbol);
                 }
-            }
-        }
-    }
-
-    @Override
-    public void onData(String symbol, Map<String, String> data) {
-        log.debug("SEND {} {}", symbol, data);
-        toLowerCase(data);
-
-        SubscriptionInfo sub = subscriptions.get(symbol);
-        if (sub != null) {
-            synchronized (sub) {
-                sub.sessions.keySet().forEach(s -> send(s, symbol, data));
             }
         }
     }

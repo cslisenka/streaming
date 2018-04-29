@@ -1,6 +1,5 @@
 package com.example.demo.handler.ex2;
 
-import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -26,7 +24,7 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricingListener {
+public class MaxFrequencyHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
 
@@ -48,7 +46,17 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
     @Autowired
     public MaxFrequencyHandler(RandomPriceGenerator gen) {
         this.gen = gen;
-        gen.addListener(this);
+        gen.addListener((symbol, data) -> {
+            log.debug("SEND {} {}", symbol, data);
+            toLowerCase(data);
+
+            SubscriptionInfo sub = subscriptions.get(symbol);
+            if (sub != null) {
+                synchronized (sub) {
+                    sub.snapshot.putAll(data);
+                }
+            }
+        });
     }
 
     @PostConstruct
@@ -109,19 +117,6 @@ public class MaxFrequencyHandler extends TextWebSocketHandler implements IPricin
                     subscriptions.remove(symbol);
                     gen.unsubscribe(symbol);
                 }
-            }
-        }
-    }
-
-    @Override
-    public void onData(String symbol, Map<String, String> data) {
-        log.debug("SEND {} {}", symbol, data);
-        toLowerCase(data);
-
-        SubscriptionInfo sub = subscriptions.get(symbol);
-        if (sub != null) {
-            synchronized (sub) {
-                sub.snapshot.putAll(data);
             }
         }
     }
