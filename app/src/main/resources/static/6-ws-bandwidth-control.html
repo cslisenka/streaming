@@ -117,19 +117,19 @@
         subscriptions['STOCK_AAPL'] = {
             symbol : 'STOCK_AAPL',
             command : 'subscribe',
-            maxFrequency : 1,
+            maxFrequency : 100,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_IBM'] = {
             symbol : 'STOCK_IBM',
             command : 'subscribe',
-            maxFrequency : 10,
+            maxFrequency : 100,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_EPAM'] = {
             symbol : 'STOCK_EPAM',
             command : 'subscribe',
-            maxFrequency : 50,
+            maxFrequency : 100,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_TSLA'] = {
