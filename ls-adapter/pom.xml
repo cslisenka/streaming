@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>demo</artifactId>
-        <groupId>com.example</groupId>
-        <version>0.0.1-SNAPSHOT</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">>
 
     <artifactId>ls-adapter</artifactId>
+    <groupId>com.example</groupId>
+    <version>0.0.1-SNAPSHOT</version>
 
     <build>
         <plugins>
@@ -64,9 +60,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- in case of troubles with this dependency, download Lightstreamer SDK manually
+             https://lightstreamer.com/download/ -->
             <groupId>com.lightstreamer</groupId>
             <artifactId>ls-javase-gen</artifactId>
-            <version>4.2.0</version>
+            <version>4.2.5</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
