@@ -81,9 +81,4 @@
         <install_dir>stock</install_dir>
         <adapter_class>com.example.StockPriceAdapter</adapter_class>
     </data_provider>
-
-    <data_provider name="PORTFOLIO">
-        <install_dir>portfolio</install_dir>
-        <adapter_class>com.example.PortfolioAdapter</adapter_class>
-    </data_provider>
 </adapters_conf>
