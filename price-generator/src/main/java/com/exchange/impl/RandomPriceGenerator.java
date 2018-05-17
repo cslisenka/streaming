@@ -16,7 +16,7 @@ public class RandomPriceGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(RandomPriceGenerator.class);
 
-    private final NumberFormat formatter = new DecimalFormat("#0.00");
+    private final NumberFormat formatter;
     private final int delay;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final Map<String, Snapshot> subscriptions = new ConcurrentHashMap<>();
@@ -24,6 +24,8 @@ public class RandomPriceGenerator {
 
     public RandomPriceGenerator(int delay) {
         this.delay = delay;
+        formatter = NumberFormat.getNumberInstance(Locale.US);
+        ((DecimalFormat) formatter).applyPattern("#0.00");
     }
 
     static class Snapshot {
