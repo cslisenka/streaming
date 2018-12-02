@@ -1,6 +1,5 @@
 package com.example.demo.handler.ex4;
 
-import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
@@ -30,7 +29,6 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(DeltaDeliveryHandler.class);
 
-    private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {
@@ -39,7 +37,7 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler {
     }
 
     public static class SessionInfo {
-        RateLimiter rate; // frequency limiter
+        RateLimiter rate;
         List<String> schema; // If empty means sending full data
         Map<String, String> dataSent = new HashMap<>();
     }
@@ -52,7 +50,6 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);
-            toLowerCase(data);
 
             SubscriptionInfo sub = subscriptions.get(symbol);
             if (sub != null) {
@@ -89,9 +86,9 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler {
         String command = request.get(COMMAND).toString();
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = (double) request.get(MAX_FREQUENCY);
+            double rate = (double) request.get(RATE);
             List<String> schema = (List<String>) request.get(SCHEMA);
-            subscribe(symbol, s, frequency, schema);
+            subscribe(symbol, s, rate, schema);
         }
 
         if (UNSUBSCRIBE.equals(command)) {
@@ -99,13 +96,13 @@ public class DeltaDeliveryHandler extends TextWebSocketHandler {
         }
     }
 
-    private void subscribe(String symbol, WebSocketSession s, double frequency, List<String> schema) {
+    private void subscribe(String symbol, WebSocketSession s, double rate, List<String> schema) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.rate = RateLimiter.create(rate < MAX_RATE ? rate : MAX_RATE);
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {

@@ -9,8 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
-import static com.example.demo.MessageUtil.toLowerCase;
-
 public class BandwidthTest {
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -66,8 +64,6 @@ public class BandwidthTest {
 
         @Override
         public void onData(String symbol, Map<String, String> data) {
-            toLowerCase(data);
-
             Map<String, String> snapshot = snapshots.putIfAbsent(symbol, data);
             if (snapshot == null) {
                 data.put("symbol", symbol);
@@ -102,7 +98,6 @@ public class BandwidthTest {
         @Override
         public void onData(String symbol, Map<String, String> data) {
             data.put("symbol", symbol);
-            toLowerCase(data);
             writer.write(MessageUtil.toJson(data));
         }
 

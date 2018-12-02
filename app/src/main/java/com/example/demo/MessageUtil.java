@@ -6,9 +6,11 @@ import java.util.*;
 
 public class MessageUtil {
 
+    public static final double MAX_RATE = 20; // max updates per second
+
     public static final String SYMBOL = "symbol";
     public static final String SCHEMA = "schema";
-    public static final String MAX_FREQUENCY = "maxFrequency";
+    public static final String RATE = "rate";
     public static final String COMMAND = "command";
 
     public static final String SUBSCRIBE = "subscribe";
@@ -19,7 +21,7 @@ public class MessageUtil {
 
     public static Map<String, Object> parseJson(String message) {
        Map<String, Object> result = new Gson().fromJson(message, HashMap.class);
-       result.putIfAbsent(MAX_FREQUENCY, Double.MAX_VALUE);
+       result.putIfAbsent(RATE, Double.MAX_VALUE);
        result.putIfAbsent(SCHEMA, new ArrayList<>());
        return result;
     }
@@ -37,7 +39,7 @@ public class MessageUtil {
     public static Map<String, Object> parsePosition(String message) {
         Map<String, Object> result = new HashMap<>();
 
-        // S - subscribe, U - unsubscribe | symbol | max frequency | schema
+        // S - subscribe, U - unsubscribe | symbol | rate | schema
         // S|AAPL|1.5|bid,ask,bidsize,asksize
         // A - acknowledge | symbol
         // A|STOCK_EPAM
@@ -71,9 +73,9 @@ public class MessageUtil {
             }
 
             if (parts.length > 3) {
-                result.put(MAX_FREQUENCY, Double.parseDouble(parts[3]));
+                result.put(RATE, Double.parseDouble(parts[3]));
             } else {
-                result.put(MAX_FREQUENCY, Double.MAX_VALUE);
+                result.put(RATE, Double.MAX_VALUE);
             }
         }
 
@@ -88,12 +90,5 @@ public class MessageUtil {
         });
 
         return result.toString();
-    }
-
-    public static void toLowerCase(Map<String, String> data) {
-        Map<String, String> result = new HashMap<>();
-        data.forEach((k, v) -> result.put(k.toLowerCase().replace("_", ""), v));
-        data.clear();
-        data.putAll(result);
     }
 }

@@ -181,6 +181,8 @@ public class RandomPriceGenerator {
                 data.put("VOLUME", s.volume + "");
                 data.put("AVG_VOLUME", s.avgVolume + "");
 
+                toLowerCase(data);
+
                 listeners.forEach(l -> {
                     try {
                         l.onData(symbol, new HashMap<>(data));
@@ -211,5 +213,12 @@ public class RandomPriceGenerator {
 
     public void shutdown() {
         executor.shutdown();
+    }
+
+    public static void toLowerCase(Map<String, String> data) {
+        Map<String, String> result = new HashMap<>();
+        data.forEach((k, v) -> result.put(k.toLowerCase().replace("_", ""), v));
+        data.clear();
+        data.putAll(result);
     }
 }

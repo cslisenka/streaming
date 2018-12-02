@@ -41,10 +41,8 @@ public class BasicHandler extends TextWebSocketHandler {
     @Autowired
     public BasicHandler(RandomPriceGenerator gen) {
         this.gen = gen;
-        // When we receive new prices
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);
-            toLowerCase(data);
 
             SubscriptionInfo sub = subscriptions.get(symbol);
             if (sub != null) {

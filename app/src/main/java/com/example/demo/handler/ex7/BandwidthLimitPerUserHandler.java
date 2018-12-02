@@ -1,6 +1,5 @@
 package com.example.demo.handler.ex7;
 
-import com.exchange.IPricingListener;
 import com.exchange.impl.RandomPriceGenerator;
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
@@ -40,7 +39,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
     }
 
     public static class SessionInfo {
-        RateLimiter rate; // frequency limiter
+        RateLimiter rate;
         List<String> schema; // If empty means sending full data
         Map<String, String> dataSent = new HashMap<>();
         AtomicBoolean ack = new AtomicBoolean(true);
@@ -61,7 +60,6 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);
-            toLowerCase(data);
 
             SubscriptionInfo sub = subscriptions.get(symbol);
             if (sub != null) {
@@ -116,7 +114,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
             String symbol = request.get(SYMBOL).toString();
 
             if (SUBSCRIBE.equals(command)) {
-                double frequency = (double) request.get(MAX_FREQUENCY);
+                double frequency = (double) request.get(RATE);
                 List<String> schema = (List<String>) request.get(SCHEMA);
                 subscribe(symbol, s, frequency, schema);
             }

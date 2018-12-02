@@ -28,7 +28,6 @@ public class RateLimitHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitHandler.class);
 
-    private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     public static class SubscriptionInfo {
@@ -37,7 +36,7 @@ public class RateLimitHandler extends TextWebSocketHandler {
     }
 
     public static class SessionInfo {
-        RateLimiter rate; // frequency limiter
+        RateLimiter rate;
     }
 
     private RandomPriceGenerator gen;
@@ -48,7 +47,6 @@ public class RateLimitHandler extends TextWebSocketHandler {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);
-            toLowerCase(data);
 
             SubscriptionInfo sub = subscriptions.get(symbol);
             if (sub != null) {
@@ -85,8 +83,8 @@ public class RateLimitHandler extends TextWebSocketHandler {
         String command = request.get(COMMAND).toString();
 
         if (SUBSCRIBE.equals(command)) {
-            double frequency = (double) request.get(MAX_FREQUENCY);
-            subscribe(symbol, s, frequency);
+            double rate = (double) request.get(RATE);
+            subscribe(symbol, s, rate);
         }
 
         if (UNSUBSCRIBE.equals(command)) {
@@ -94,13 +92,13 @@ public class RateLimitHandler extends TextWebSocketHandler {
         }
     }
 
-    private void subscribe(String symbol, WebSocketSession s, double frequency) {
+    private void subscribe(String symbol, WebSocketSession s, double rate) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.rate = RateLimiter.create(rate < MAX_RATE ? rate : MAX_RATE);
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
                 gen.subscribe(symbol);

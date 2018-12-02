@@ -117,25 +117,25 @@
         subscriptions['STOCK_AAPL'] = {
             symbol : 'STOCK_AAPL',
             command : 'subscribe',
-            maxFrequency : 3,
+            rate : 3,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_IBM'] = {
             symbol : 'STOCK_IBM',
             command : 'subscribe',
-            maxFrequency : 3,
+            rate : 3,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_EPAM'] = {
             symbol : 'STOCK_EPAM',
             command : 'subscribe',
-            maxFrequency : 3,
+            rate : 3,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
         subscriptions['STOCK_TSLA'] = {
             symbol : 'STOCK_TSLA',
             command : 'subscribe',
-            maxFrequency : 3,
+            rate : 3,
             schema : ["symbol" ,"seqnum", "timestamp", "bid", "ask", "last", "bidsize", "asksize"]
         };
 
@@ -143,8 +143,8 @@
             format : (sub) => {
                 // Schema is mandatory for position-based protocol
                 let msg = `S|${sub.symbol}|${sub.schema}`;
-                if (sub.maxFrequency) {
-                    msg += `|${sub.maxFrequency}`;
+                if (sub.rate) {
+                    msg += `|${sub.rate}`;
                 }
                 return msg;
             },
