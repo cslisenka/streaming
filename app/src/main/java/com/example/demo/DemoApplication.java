@@ -1,11 +1,11 @@
 package com.example.demo;
 
 import com.example.demo.handler.ex1.BasicHandler;
-import com.example.demo.handler.ex2.MaxFrequencyHandler;
+import com.example.demo.handler.ex2.RateLimitHandler;
 import com.example.demo.handler.ex3.SchemaHandler;
 import com.example.demo.handler.ex4.DeltaDeliveryHandler;
 import com.example.demo.handler.ex5.PositionProtocolHandler;
-import com.example.demo.handler.ex6.BandwidthControlHandler;
+import com.example.demo.handler.ex6.BackpressureHandler;
 import com.example.demo.handler.ex7.BandwidthLimitPerUserHandler;
 import com.exchange.impl.RandomPriceGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ public class DemoApplication implements WebSocketConfigurer {
 	private BasicHandler basic;
 
     @Autowired
-    private MaxFrequencyHandler maxFrequencyHandler;
+    private RateLimitHandler rateLimitHandler;
 
     @Autowired
     private SchemaHandler schemaHandler;
@@ -38,7 +38,7 @@ public class DemoApplication implements WebSocketConfigurer {
     private PositionProtocolHandler positionProtocolHandler;
 
     @Autowired
-    private BandwidthControlHandler bandwidthControlHandler;
+    private BackpressureHandler backpressureHandler;
 
     @Autowired
     private BandwidthLimitPerUserHandler bandwidthLimitPerUserHandler;
@@ -50,11 +50,11 @@ public class DemoApplication implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry r) {
         r.addHandler(basic, "/ws/basic").setAllowedOrigins("*");
-		r.addHandler(maxFrequencyHandler,     "/ws/maxFrequency").setAllowedOrigins("*");
+		r.addHandler(rateLimitHandler,     "/ws/rateLimit").setAllowedOrigins("*");
         r.addHandler(schemaHandler,           "/ws/schema").setAllowedOrigins("*");
         r.addHandler(deltaDeliveryHandler,   "/ws/deltaDelivery").setAllowedOrigins("*");
         r.addHandler(positionProtocolHandler, "/ws/position").setAllowedOrigins("*");
-		r.addHandler(bandwidthControlHandler, "/ws/bandwidth").setAllowedOrigins("*");
+		r.addHandler(backpressureHandler, "/ws/backpressure").setAllowedOrigins("*");
         r.addHandler(bandwidthLimitPerUserHandler, "/ws/bandwidthPerUser").setAllowedOrigins("*");
     }
 

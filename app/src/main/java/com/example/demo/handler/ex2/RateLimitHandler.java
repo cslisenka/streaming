@@ -24,9 +24,9 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class MaxFrequencyHandler extends TextWebSocketHandler {
+public class RateLimitHandler extends TextWebSocketHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(MaxFrequencyHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(RateLimitHandler.class);
 
     private static final double MAX_ALLOWED_FREQUENCY = 20; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
@@ -44,7 +44,7 @@ public class MaxFrequencyHandler extends TextWebSocketHandler {
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
-    public MaxFrequencyHandler(RandomPriceGenerator gen) {
+    public RateLimitHandler(RandomPriceGenerator gen) {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);

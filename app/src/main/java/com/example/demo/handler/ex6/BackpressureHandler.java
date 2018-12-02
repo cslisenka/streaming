@@ -26,9 +26,9 @@ import static com.example.demo.MessageUtil.*;
 
 @SuppressWarnings("Duplicates")
 @Component
-public class BandwidthControlHandler extends TextWebSocketHandler {
+public class BackpressureHandler extends TextWebSocketHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(BandwidthControlHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(BackpressureHandler.class);
 
     private static final double MAX_ALLOWED_FREQUENCY = 100; // max updates per second
     private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
@@ -49,7 +49,7 @@ public class BandwidthControlHandler extends TextWebSocketHandler {
     private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
 
     @Autowired
-    public BandwidthControlHandler(RandomPriceGenerator gen) {
+    public BackpressureHandler(RandomPriceGenerator gen) {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
             log.debug("SEND {} {}", symbol, data);
@@ -85,7 +85,7 @@ public class BandwidthControlHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.info("Received ({}) {}", s.getId(), m.getPayload());
+        log.debug("Received ({}) {}", s.getId(), m.getPayload());
 
         Map<String, Object> request = parsePosition(m.getPayload());
         String symbol = request.get(SYMBOL).toString();
