@@ -37,7 +37,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
             throws SubscriptionException, FailureException {
         logger.info("subscribing " + itemName);
         items.put(itemName, itemHandle);
-        gen.subscribe(itemName);
+        gen.start(itemName);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class StockPriceAdapter implements SmartDataProvider, IPricingListener {
             FailureException {
         logger.info("unsubscribing " + itemName);
         items.remove(itemName);
-        gen.unsubscribe(itemName);
+        gen.stop(itemName);
     }
 
     @Override

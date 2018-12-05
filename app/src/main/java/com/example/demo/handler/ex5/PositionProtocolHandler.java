@@ -29,29 +29,30 @@ public class PositionProtocolHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PositionProtocolHandler.class);
 
-    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
+    private Map<String, SubscriptionMetadata> subscriptions = new ConcurrentHashMap<>();
 
-    public static class SubscriptionInfo {
-        Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
+    public static class SubscriptionMetadata {
+        Map<WebSocketSession, ConsumerMetadata> sessions = new HashMap<>();
         Map<String, String> snapshot = new HashMap<>();
     }
 
-    public static class SessionInfo {
+    public static class ConsumerMetadata {
         RateLimiter rate;
         List<String> schema; // If empty means sending full data
         Map<String, String> dataSent = new HashMap<>();
     }
 
     private RandomPriceGenerator gen;
-    private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
     public PositionProtocolHandler(RandomPriceGenerator gen) {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
+            // This code executed each time when pricing update generated
             log.debug("SEND {} {}", symbol, data);
 
-            SubscriptionInfo sub = subscriptions.get(symbol);
+            SubscriptionMetadata sub = subscriptions.get(symbol);
             if (sub != null) {
                 synchronized (sub) {
                     sub.snapshot.putAll(data);
@@ -97,34 +98,34 @@ public class PositionProtocolHandler extends TextWebSocketHandler {
     }
 
     private void subscribe(String symbol, WebSocketSession s, double rate, List<String> schema) {
-        subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
+        subscriptions.putIfAbsent(symbol, new SubscriptionMetadata());
 
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         synchronized (sub) {
-            SessionInfo info = new SessionInfo();
+            ConsumerMetadata info = new ConsumerMetadata();
             info.rate = RateLimiter.create(rate < MAX_RATE ? rate : MAX_RATE);
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                gen.subscribe(symbol);
+                gen.start(symbol);
             }
         }
     }
 
     private void unsubscribe(String symbol, WebSocketSession s) {
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         if (sub != null) {
             synchronized (sub) {
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    gen.unsubscribe(symbol);
+                    gen.stop(symbol);
                 }
             }
         }
     }
 
-    private void send(WebSocketSession s, String symbol, Map<String, String> data, SessionInfo info) {
+    private void send(WebSocketSession s, String symbol, Map<String, String> data, ConsumerMetadata info) {
         exec.submit(() -> {
             try {
                 HashMap<String, String> toSend = new HashMap<>();

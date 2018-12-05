@@ -15,19 +15,19 @@ public class RandomPriceGeneratorTest {
 
     @Test
     public void test() throws InterruptedException {
-        gen.subscribe("AAPL");
+        gen.start("AAPL");
 
         Thread.sleep(5_000);
 
-        gen.subscribe("IBM");
+        gen.start("IBM");
 
         Thread.sleep(5_000);
 
-        gen.unsubscribe("AAPL");
+        gen.stop("AAPL");
 
         Thread.sleep(5_000);
 
-        gen.unsubscribe("IBM");
+        gen.stop("IBM");
 
         Thread.sleep(5_000);
     }

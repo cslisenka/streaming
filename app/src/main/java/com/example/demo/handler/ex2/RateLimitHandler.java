@@ -28,27 +28,28 @@ public class RateLimitHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitHandler.class);
 
-    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
+    private Map<String, SubscriptionMetadata> subscriptions = new ConcurrentHashMap<>();
 
-    public static class SubscriptionInfo {
-        Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
+    public static class SubscriptionMetadata {
+        Map<WebSocketSession, ConsumerMetadata> sessions = new HashMap<>();
         Map<String, String> snapshot = new HashMap<>();
     }
 
-    public static class SessionInfo {
+    public static class ConsumerMetadata {
         RateLimiter rate;
     }
 
     private RandomPriceGenerator gen;
-    private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
+    private ScheduledExecutorService exec = Executors.newScheduledThreadPool(8);
 
     @Autowired
     public RateLimitHandler(RandomPriceGenerator gen) {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
+            // This code executed each time when pricing update generated
             log.debug("SEND {} {}", symbol, data);
 
-            SubscriptionInfo sub = subscriptions.get(symbol);
+            SubscriptionMetadata sub = subscriptions.get(symbol);
             if (sub != null) {
                 synchronized (sub) {
                     sub.snapshot.putAll(data);
@@ -60,6 +61,7 @@ public class RateLimitHandler extends TextWebSocketHandler {
     @PostConstruct
     public void start() {
         exec.scheduleAtFixedRate(() -> {
+            // This code executed each 10 milliseconds
             subscriptions.forEach((symbol, sub) -> {
                 synchronized (sub) {
                     if (!sub.snapshot.isEmpty()) {
@@ -76,6 +78,7 @@ public class RateLimitHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
+        // This code executed each time client sends message to server
         log.info("Received ({}) {}", s.getId(), m.getPayload());
 
         Map<String, Object> request = parseJson(m.getPayload());
@@ -93,27 +96,27 @@ public class RateLimitHandler extends TextWebSocketHandler {
     }
 
     private void subscribe(String symbol, WebSocketSession s, double rate) {
-        subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
+        subscriptions.putIfAbsent(symbol, new SubscriptionMetadata());
 
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         synchronized (sub) {
-            SessionInfo info = new SessionInfo();
+            ConsumerMetadata info = new ConsumerMetadata();
             info.rate = RateLimiter.create(rate < MAX_RATE ? rate : MAX_RATE);
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                gen.subscribe(symbol);
+                gen.start(symbol);
             }
         }
     }
 
     private void unsubscribe(String symbol, WebSocketSession s) {
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         if (sub != null) {
             synchronized (sub) {
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    gen.unsubscribe(symbol);
+                    gen.stop(symbol);
                 }
             }
         }

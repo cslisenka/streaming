@@ -25,26 +25,27 @@ public class BasicHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(BasicHandler.class);
 
-    private ExecutorService exec = Executors.newCachedThreadPool();
+    private Map<String, SubscriptionMetadata> subscriptions = new ConcurrentHashMap<>();
 
-    public static class SubscriptionInfo {
-        Map<WebSocketSession, SessionInfo> sessions = new HashMap<>();
+    public static class SubscriptionMetadata {
+        Map<WebSocketSession, ConsumerMetadata> sessions = new HashMap<>();
     }
 
-    public static class SessionInfo {
+    public static class ConsumerMetadata {
         // Nothing to store now
     }
 
     private RandomPriceGenerator gen;
-    private Map<String, SubscriptionInfo> subscriptions = new ConcurrentHashMap<>();
+    private ExecutorService exec = Executors.newCachedThreadPool();
 
     @Autowired
     public BasicHandler(RandomPriceGenerator gen) {
         this.gen = gen;
         gen.addListener((symbol, data) -> {
+            // This code executed each time when pricing update generated
             log.debug("SEND {} {}", symbol, data);
 
-            SubscriptionInfo sub = subscriptions.get(symbol);
+            SubscriptionMetadata sub = subscriptions.get(symbol);
             if (sub != null) {
                 synchronized (sub) {
                     sub.sessions.keySet().forEach(s -> send(s, symbol, data));
@@ -55,6 +56,7 @@ public class BasicHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
+        // This code executed each time client sends message to server
         log.info("Received ({}) {}", s.getId(), m.getPayload());
 
         Map<String, Object> request = parseJson(m.getPayload());
@@ -71,26 +73,26 @@ public class BasicHandler extends TextWebSocketHandler {
     }
 
     private void subscribe(String symbol, WebSocketSession s) {
-        subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
+        subscriptions.putIfAbsent(symbol, new SubscriptionMetadata());
 
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         synchronized (sub) {
-            SessionInfo info = new SessionInfo();
+            ConsumerMetadata info = new ConsumerMetadata();
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                gen.subscribe(symbol);
+                gen.start(symbol);
             }
         }
     }
 
     private void unsubscribe(String symbol, WebSocketSession s) {
-        SubscriptionInfo sub = subscriptions.get(symbol);
+        SubscriptionMetadata sub = subscriptions.get(symbol);
         if (sub != null) {
             synchronized (sub) {
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    gen.unsubscribe(symbol);
+                    gen.stop(symbol);
                 }
             }
         }

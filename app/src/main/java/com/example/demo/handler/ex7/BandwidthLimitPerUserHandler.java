@@ -99,7 +99,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession s, TextMessage m) throws Exception {
-        log.debug("Received ({}) {}", s.getId(), m.getPayload());
+        log.info("Received ({}) {}", s.getId(), m.getPayload());
 
         Map<String, Object> request = parsePosition(m.getPayload());
         String command = request.get(COMMAND).toString();
@@ -133,17 +133,17 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
         }
     }
 
-    private void subscribe(String symbol, WebSocketSession s, double frequency, List<String> schema) {
+    private void subscribe(String symbol, WebSocketSession s, double rate, List<String> schema) {
         subscriptions.putIfAbsent(symbol, new SubscriptionInfo());
 
         SubscriptionInfo sub = subscriptions.get(symbol);
         synchronized (sub) {
             SessionInfo info = new SessionInfo();
-            info.rate = RateLimiter.create(frequency < MAX_ALLOWED_FREQUENCY ? frequency : MAX_ALLOWED_FREQUENCY);
+            info.rate = RateLimiter.create(rate < MAX_ALLOWED_FREQUENCY ? rate : MAX_ALLOWED_FREQUENCY);
             info.schema = schema;
             sub.sessions.put(s, info);
             if (sub.sessions.size() == 1) {
-                gen.subscribe(symbol);
+                gen.start(symbol);
             }
         }
     }
@@ -155,7 +155,7 @@ public class BandwidthLimitPerUserHandler extends TextWebSocketHandler {
                 sub.sessions.remove(s);
                 if (sub.sessions.size() == 0) {
                     subscriptions.remove(symbol);
-                    gen.unsubscribe(symbol);
+                    gen.stop(symbol);
                 }
             }
         }

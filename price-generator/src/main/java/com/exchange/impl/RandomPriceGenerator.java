@@ -48,12 +48,12 @@ public class RandomPriceGenerator {
         long avgVolume;
     }
 
-    public void subscribe(String symbol) {
+    public void start(String symbol) {
         subscriptions.put(symbol, new Snapshot());
         log.info("{}", subscriptions.toString());
     }
 
-    public void unsubscribe(String symbol) {
+    public void stop(String symbol) {
         subscriptions.remove(symbol);
         log.info("{}", subscriptions.toString());
     }

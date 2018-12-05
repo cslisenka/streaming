@@ -20,7 +20,7 @@ public class BandwidthTest {
         gen.addListener(snapshotUpdate);
         gen.addListener(position);
 
-        gen.subscribe("STOCK_AAPL");
+        gen.start("STOCK_AAPL");
 
         gen.start();
         TimeUnit.SECONDS.sleep(10);
